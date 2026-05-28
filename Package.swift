@@ -44,7 +44,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Dictionary Primitives Core", package: "swift-dictionary-primitives"),
                 .product(name: "Set Ordered Primitive", package: "swift-set-ordered-primitives"),
-                .product(name: "Hash Table Primitives", package: "swift-hash-table-primitives"),
+                .product(name: "Hash Table Static Primitive", package: "swift-hash-table-primitives"),
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
                 .product(name: "Buffer Linear Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Primitives", package: "swift-buffer-linear-primitives"),

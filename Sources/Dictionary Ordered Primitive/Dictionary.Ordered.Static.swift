@@ -12,7 +12,7 @@
 public import Buffer_Linear_Primitive
 public import Buffer_Linear_Inline_Primitives
 public import Dictionary_Primitives_Core
-import Hash_Table_Primitives
+public import Hash_Table_Static_Primitive
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 
