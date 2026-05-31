@@ -80,8 +80,8 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
         public var isSpilled: Bool { _heapKeys != nil }
 
         /// Spills inline key storage to heap.
-        @usableFromInline
-        mutating func _spillKeysToHeap() {
+        @inlinable
+        package mutating func _spillKeysToHeap() {
             precondition(_heapKeys == nil, "Already spilled")
 
             var heapKeys = Set<Key>.Ordered()

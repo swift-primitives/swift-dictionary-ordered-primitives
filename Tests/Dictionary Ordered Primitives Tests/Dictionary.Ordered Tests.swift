@@ -107,7 +107,7 @@ extension DictionaryOrderedTests.Unit {
         dict["alpha"] = 1
         dict["bravo"] = 2
 
-        let keys = Array(dict.keys)
+        let keys = toArray(dict.keys)
         #expect(keys == ["charlie", "alpha", "bravo"])
     }
 
@@ -121,7 +121,7 @@ extension DictionaryOrderedTests.Unit {
         // Update middle element
         dict["b"] = 20
 
-        let keys = Array(dict.keys)
+        let keys = toArray(dict.keys)
         #expect(keys == ["a", "b", "c"])
         #expect(dict["b"] == 20)
     }
@@ -163,7 +163,7 @@ extension DictionaryOrderedTests.Unit {
         #expect(dict["c"] == 3)
 
         // Order should be preserved (b was updated, not re-inserted)
-        let keys = Array(dict.keys)
+        let keys = toArray(dict.keys)
         #expect(keys == ["a", "b", "c"])
     }
 
@@ -213,7 +213,7 @@ extension DictionaryOrderedTests.Unit {
 
         var keys: [String] = []
         var values: [Int] = []
-        for (key, value) in dict {
+        dict.forEach { (key, value) in
             keys.append(key)
             values.append(value)
         }
@@ -331,13 +331,13 @@ extension DictionaryOrderedTests.EdgeCase {
         dict["a"] = 1
         dict["b"] = 2
 
-        let originalKeys = Array(dict.keys)
+        let originalKeys = toArray(dict.keys)
 
         // Merge empty into non-empty
         let empty: [(String, Int)] = []
         dict.merge.keep.first(empty)
 
-        #expect(Array(dict.keys) == originalKeys)
+        #expect(toArray(dict.keys) == originalKeys)
         #expect(dict.count == 2)
     }
 
@@ -365,7 +365,7 @@ extension DictionaryOrderedTests.EdgeCase {
         dict.values.remove("b")
         dict["b"] = 20
 
-        let keys = Array(dict.keys)
+        let keys = toArray(dict.keys)
         #expect(keys == ["a", "c", "b"])
     }
 
@@ -416,8 +416,8 @@ extension DictionaryOrderedTests.Integration {
         copy["d"] = 4
         copy["a"] = nil
 
-        #expect(Array(original.keys) == ["a", "b", "c"])
-        #expect(Array(copy.keys) == ["b", "c", "d"])
+        #expect(toArray(original.keys) == ["a", "b", "c"])
+        #expect(toArray(copy.keys) == ["b", "c", "d"])
         #expect(original.count == 3)
         #expect(copy.count == 3)
     }
@@ -434,9 +434,9 @@ extension DictionaryOrderedTests.Integration {
         copy1["c"] = 3
         copy2["a"] = nil
 
-        #expect(Array(original.keys) == ["a", "b"])
-        #expect(Array(copy1.keys) == ["a", "b", "c"])
-        #expect(Array(copy2.keys) == ["b"])
+        #expect(toArray(original.keys) == ["a", "b"])
+        #expect(toArray(copy1.keys) == ["a", "b", "c"])
+        #expect(toArray(copy2.keys) == ["b"])
     }
 
     @Test
@@ -488,7 +488,7 @@ extension DictionaryOrderedTests.Integration {
             dict["key\(i)"] = i * 100
         }
 
-        #expect(Array(dict.keys) == expectedOrder)
+        #expect(toArray(dict.keys) == expectedOrder)
 
         // Remove every 5th element
         for i in stride(from: 0, to: 50, by: 5) {
@@ -496,7 +496,7 @@ extension DictionaryOrderedTests.Integration {
             expectedOrder.removeAll { $0 == "key\(i)" }
         }
 
-        #expect(Array(dict.keys) == expectedOrder)
+        #expect(toArray(dict.keys) == expectedOrder)
 
         // Re-insert removed elements (should go to end)
         for i in stride(from: 0, to: 50, by: 5) {
@@ -504,7 +504,7 @@ extension DictionaryOrderedTests.Integration {
             expectedOrder.append("key\(i)")
         }
 
-        #expect(Array(dict.keys) == expectedOrder)
+        #expect(toArray(dict.keys) == expectedOrder)
     }
 
     @Test
@@ -514,14 +514,14 @@ extension DictionaryOrderedTests.Integration {
         dict["b"] = 2
         dict["c"] = 3
 
-        let originalKeys = Array(dict.keys)
-        let originalValues = (0..<dict.count).map { dict[index: $0].value }
+        let originalKeys = toArray(dict.keys)
+        let originalValues = toArray(dict.values)
 
         // Merge with self should be idempotent
-        dict.merge.keep.first(dict.map { ($0.key, $0.value) })
+        dict.merge.keep.first(toArray(dict).map { ($0.key, $0.value) })
 
-        #expect(Array(dict.keys) == originalKeys)
-        #expect((0..<dict.count).map { dict[index: $0].value } == originalValues)
+        #expect(toArray(dict.keys) == originalKeys)
+        #expect(toArray(dict.values) == originalValues)
     }
 
     @Test
@@ -531,14 +531,14 @@ extension DictionaryOrderedTests.Integration {
         dict["b"] = 2
         dict["c"] = 3
 
-        let originalKeys = Array(dict.keys)
-        let originalValues = (0..<dict.count).map { dict[index: $0].value }
+        let originalKeys = toArray(dict.keys)
+        let originalValues = toArray(dict.values)
 
         // Merge with self should be idempotent
-        dict.merge.keep.last(dict.map { ($0.key, $0.value) })
+        dict.merge.keep.last(toArray(dict).map { ($0.key, $0.value) })
 
-        #expect(Array(dict.keys) == originalKeys)
-        #expect((0..<dict.count).map { dict[index: $0].value } == originalValues)
+        #expect(toArray(dict.keys) == originalKeys)
+        #expect(toArray(dict.values) == originalValues)
     }
 
     @Test
@@ -547,14 +547,14 @@ extension DictionaryOrderedTests.Integration {
         dict["a"] = 1
         dict["b"] = 2
 
-        let originalKeys = Array(dict.keys)
-        let originalValues = (0..<dict.count).map { dict[index: $0].value }
+        let originalKeys = toArray(dict.keys)
+        let originalValues = toArray(dict.values)
 
         // Merge with empty should be identity
         dict.merge.keep.first([])
 
-        #expect(Array(dict.keys) == originalKeys)
-        #expect((0..<dict.count).map { dict[index: $0].value } == originalValues)
+        #expect(toArray(dict.keys) == originalKeys)
+        #expect(toArray(dict.values) == originalValues)
     }
 
     @Test
@@ -563,14 +563,14 @@ extension DictionaryOrderedTests.Integration {
         dict["a"] = 1
         dict["b"] = 2
 
-        let originalKeys = Array(dict.keys)
-        let originalValues = (0..<dict.count).map { dict[index: $0].value }
+        let originalKeys = toArray(dict.keys)
+        let originalValues = toArray(dict.values)
 
         // Merge with empty should be identity
         dict.merge.keep.last([])
 
-        #expect(Array(dict.keys) == originalKeys)
-        #expect((0..<dict.count).map { dict[index: $0].value } == originalValues)
+        #expect(toArray(dict.keys) == originalKeys)
+        #expect(toArray(dict.values) == originalValues)
     }
 
     @Test
@@ -584,7 +584,7 @@ extension DictionaryOrderedTests.Integration {
         dict.merge.keep.last([("c", 30), ("b", 20), ("a", 10)])
 
         // Order should be preserved, values updated
-        #expect(Array(dict.keys) == ["a", "b", "c"])
+        #expect(toArray(dict.keys) == ["a", "b", "c"])
         #expect(dict["a"] == 10)
         #expect(dict["b"] == 20)
         #expect(dict["c"] == 30)
@@ -601,17 +601,19 @@ extension DictionaryOrderedTests.Integration {
         dict.merge.keep.first([("b", 2), ("d", 4), ("f", 6)])
 
         // Original keys first, then new keys in merge order
-        #expect(Array(dict.keys) == ["a", "c", "e", "b", "d", "f"])
+        #expect(toArray(dict.keys) == ["a", "c", "e", "b", "d", "f"])
     }
 
-    @Test(.disabled("Crashes with cross-module BidirectionalCollection conformance"))
-    func `Bidirectional iteration`() {
+    @Test
+    func `Reverse iteration`() {
         var dict = Dictionary<String, Int>.Ordered()
         dict["a"] = 1
         dict["b"] = 2
         dict["c"] = 3
 
-        let reversed = Array(dict.reversed())
+        // `Dictionary.Ordered` no longer conforms `Swift.BidirectionalCollection`
+        // (dropped with the stdlib-bridge migration); reverse a materialised snapshot.
+        let reversed = toArray(dict).reversed()
         #expect(reversed.map { $0.key } == ["c", "b", "a"])
     }
 }

@@ -12,6 +12,10 @@
 public import Buffer_Linear_Primitive
 public import Buffer_Linear_Primitives
 public import Index_Primitives
+public import Iterable
+public import Iterator_Primitive
+public import Iterator_Chunk_Primitives
+public import Sequence_Primitives
 public import Set_Primitives
 
 // MARK: - Values Accessor (Copyable values only)
@@ -170,34 +174,69 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
     }
 }
 
-// MARK: - Sequence Conformance (Copyable values only)
+// MARK: - Scalar iterator
+//
+// The Values view yields values one at a time by walking the underlying
+// `Buffer<Value>.Linear` by index. Wrapped in `Iterator.Materializing` for the bulk
+// `Iterable` face — the same self-contained generator shape the parent dictionary uses,
+// avoiding any reliance on the underlying buffer's bridge-vended iterator overloads.
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered.Values: Swift.Sequence {
-    public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
+    /// Single-pass scalar iterator over the values in insertion order.
+    public struct Iterator: Iterator_Primitive.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline
-        var _inner: Buffer<Value>.Linear.Iterator
+        let _values: Buffer<Value>.Linear
 
         @usableFromInline
-        init(_inner: Buffer<Value>.Linear.Iterator) {
-            self._inner = _inner
-        }
+        var _index: Index_Primitives.Index<Value>
 
-        @_lifetime(&self)
+        @usableFromInline
+        let _count: Index_Primitives.Index<Value>.Count
+
         @inlinable
-        public mutating func nextSpan(maximumCount: Cardinal) -> Span<Value> {
-            _inner.nextSpan(maximumCount: maximumCount)
+        init(_ values: Buffer<Value>.Linear) {
+            self._values = values
+            self._index = .zero
+            self._count = values.count
         }
 
         @inlinable
         public mutating func next() -> Value? {
-            _inner.next()
+            guard _index < _count else { return nil }
+            let value = _values[_index]
+            _index = _index + .one
+            return value
         }
-    }
-
-    @inlinable
-    public func makeIterator() -> Iterator {
-        Iterator(_inner: dict._values.makeIterator())
     }
 }
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Values.Iterator: Sendable where Value: Sendable {}
+
+// MARK: - Iterable (multipass, borrowing) — via materialising adapter
+//
+// Values does NOT conform to `Swift.Sequence`: dropped to match the exemplar (the
+// deferred stdlib-interop axis).
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Values: Iterable {
+    @_implements(Iterable, Iterator)
+    public typealias IterableIterator = Iterator_Primitive.Iterator.Materializing<Iterator>
+
+    @inlinable
+    @_lifetime(borrow self)
+    @_implements(Iterable, makeIterator())
+    public borrowing func iterableMakeIterator() -> Iterator_Primitive.Iterator.Materializing<Iterator> {
+        Iterator_Primitive.Iterator.Materializing(Iterator(dict._values))
+    }
+}
+
+// MARK: - Sequenceable (single-pass, consuming)
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Values: Sequenceable {
+    @_implements(Sequenceable, Iterator)
+    public typealias SequenceableIterator = Iterator
+
+    @inlinable
+    public consuming func makeIterator() -> Iterator {
+        Iterator(dict._values)
+    }
+}

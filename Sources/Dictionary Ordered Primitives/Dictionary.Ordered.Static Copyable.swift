@@ -10,30 +10,31 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitives_Core
 public import Index_Primitives
-internal import Sequence_Primitives
+public import Iterable
+public import Iterator_Primitive
+public import Iterator_Chunk_Primitives
+import Sequence_Primitives
 public import Buffer_Linear_Inline_Primitive
 
 // Note: Dictionary.Ordered.Static is unconditionally ~Copyable (inline storage requires deinit),
-// so it cannot conform to Swift.Sequence which requires Copyable.
-// It conforms to Sequence.Protocol which supports ~Copyable containers.
+// so it never conformed to Swift.Sequence (which requires Copyable). It now exposes the
+// span-primitive iteration via Iterable (materialising adapter) + Sequenceable.
 
 // ============================================================================
-// MARK: - Iterator
+// MARK: - Scalar pair iterator
 // ============================================================================
+//
+// Copies keys and values to `Buffer.Linear` snapshots for safe iteration, avoiding
+// pointer-escape issues with inline storage; then synthesises each `(key, value)` pair
+// by walking the parallel snapshots by index. Wrapped in `Iterator.Materializing` for
+// the bulk `Iterable` face below.
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copyable {
-    /// Iterator for Dictionary.Ordered.Static key-value pairs.
-    ///
-    /// Copies keys and values to `Buffer.Linear` snapshots for safe iteration,
-    /// avoiding pointer escape issues with inline storage.
-    ///
-    /// - Note: Uses `_element` for single-element Optional inline span production.
-    ///   The underlying `_keys` and `_values` snapshots are contiguous `Buffer.Linear`s —
-    ///   composing two `Buffer.Linear.Iterator`s could eliminate the buffer,
-    ///   but tuple packaging prevents direct delegation.
-    public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
+    /// Single-pass scalar iterator for `Dictionary.Ordered.Static` key-value pairs.
+    public struct Iterator: Iterator_Primitive.Iterator.`Protocol`, IteratorProtocol {
         public typealias Element = (key: Key, value: Value)
 
         @usableFromInline
@@ -49,34 +50,10 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
         var _position: Index_Primitives.Index<Key> = .zero
 
         @usableFromInline
-        var _element: Element? = nil
-
-        @usableFromInline
         init(keys: Buffer<Key>.Linear, values: Buffer<Value>.Linear) {
             self._keys = keys
             self._values = values
             self._end = keys.count
-        }
-
-        @_lifetime(&self)
-        @inlinable
-        public mutating func nextSpan(maximumCount: Cardinal) -> Span<Element> {
-            let ptr = unsafe withUnsafeMutablePointer(to: &_element) { p in
-                unsafe UnsafePointer<Element>(
-                    unsafe UnsafeRawPointer(p).assumingMemoryBound(to: Element.self)
-                )
-            }
-            guard maximumCount > .zero else {
-                let span = unsafe Span(_unsafeStart: ptr, count: 0)
-                return unsafe _overrideLifetime(span, mutating: &self)
-            }
-            guard let value = next() else {
-                let span = unsafe Span(_unsafeStart: ptr, count: 0)
-                return unsafe _overrideLifetime(span, mutating: &self)
-            }
-            _element = value
-            let span = unsafe Span(_unsafeStart: ptr, count: 1)
-            return unsafe _overrideLifetime(span, mutating: &self)
         }
 
         @inlinable
@@ -93,21 +70,12 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Static.Iterator: Sendable
 where Key: Sendable, Value: Sendable {}
 
-// ============================================================================
-// MARK: - Sequence.Protocol Conformance
-// ============================================================================
+// MARK: - Snapshot helper (names internal storage)
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered.Static: Sequence.`Protocol` where Value: Copyable {
-    /// Returns an iterator over the dictionary's key-value pairs.
-    ///
-    /// Copies keys and values to `Buffer.Linear` snapshots for safe iteration,
-    /// avoiding pointer escape issues with inline storage.
-    /// Pairs are yielded in insertion order.
-    ///
-    /// - Note: Incurs O(n) copy cost. For performance-critical code, use
-    ///   the `withValue(forKey:_:)` method or index-based access instead.
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copyable {
+    /// Builds parallel `Buffer.Linear` snapshots of the inline key/value storage.
     @inlinable
-    public borrowing func makeIterator() -> Iterator {
+    func _snapshotIterator() -> Iterator {
         var keySnapshot = Buffer<Key>.Linear(minimumCapacity: _keys.count)
         var valueSnapshot = Buffer<Value>.Linear(minimumCapacity: _values.count)
         var i: Index_Primitives.Index<Key> = .zero
@@ -118,6 +86,44 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static: Sequence.`Protoc
             i += .one
         }
         return Iterator(keys: keySnapshot, values: valueSnapshot)
+    }
+}
+
+// ============================================================================
+// MARK: - Iterable (multipass, borrowing) — via materialising adapter
+// ============================================================================
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Static: Iterable where Value: Copyable {
+    @_implements(Iterable, Iterator)
+    public typealias IterableIterator = Iterator_Primitive.Iterator.Materializing<Iterator>
+
+    @inlinable
+    @_lifetime(borrow self)
+    @_implements(Iterable, makeIterator())
+    public borrowing func iterableMakeIterator() -> Iterator_Primitive.Iterator.Materializing<Iterator> {
+        Iterator_Primitive.Iterator.Materializing(_snapshotIterator())
+    }
+}
+
+// ============================================================================
+// MARK: - Sequenceable (single-pass, consuming)
+// ============================================================================
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Static: Sequenceable where Value: Copyable {
+    @_implements(Sequenceable, Iterator)
+    public typealias SequenceableIterator = Iterator
+
+    /// Returns a single-pass iterator over the dictionary's key-value pairs.
+    ///
+    /// Copies keys and values to `Buffer.Linear` snapshots for safe iteration,
+    /// avoiding pointer-escape issues with inline storage. Pairs are yielded in
+    /// insertion order.
+    ///
+    /// - Note: Incurs O(n) copy cost. For performance-critical code, use the
+    ///   `withValue(forKey:_:)` method or index-based access instead.
+    @inlinable
+    public consuming func makeIterator() -> Iterator {
+        _snapshotIterator()
     }
 
     /// Returns the count as the underestimated count since we know the exact size.

@@ -121,8 +121,8 @@ extension DictionaryOrderedModelTests.Unit {
             }
         }
 
-        #expect(Array(orderedDict.keys) == insertedKeys)
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == insertedKeys)
+        #expect(toArray(orderedDict.keys) == model.keys)
     }
 
     @Test
@@ -137,7 +137,7 @@ extension DictionaryOrderedModelTests.Unit {
             model[key] = i
         }
 
-        let originalOrder = Array(orderedDict.keys)
+        let originalOrder = toArray(orderedDict.keys)
 
         // Update various elements (not just middle)
         for i in [0, 5, 10, 15, 19] {
@@ -146,8 +146,8 @@ extension DictionaryOrderedModelTests.Unit {
             model[key] = i * 100
         }
 
-        #expect(Array(orderedDict.keys) == originalOrder)
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == originalOrder)
+        #expect(toArray(orderedDict.keys) == model.keys)
 
         // Verify values were updated
         for i in [0, 5, 10, 15, 19] {
@@ -216,7 +216,7 @@ extension DictionaryOrderedModelTests.Unit {
         #expect(orderedDict["b"] == 2)  // kept original
         #expect(orderedDict["c"] == 3)  // new
         #expect(orderedDict["d"] == 4)  // new
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == model.keys)
     }
 
     @Test
@@ -244,7 +244,7 @@ extension DictionaryOrderedModelTests.Unit {
         #expect(orderedDict["d"] == 4)
 
         // Order: a, b stay in place; c, d added at end
-        #expect(Array(orderedDict.keys) == ["a", "b", "c", "d"])
+        #expect(toArray(orderedDict.keys) == ["a", "b", "c", "d"])
     }
 
     @Test
@@ -261,7 +261,7 @@ extension DictionaryOrderedModelTests.Unit {
         }
 
         var dictPairs: [(Int, Int)] = []
-        for (key, value) in orderedDict {
+        orderedDict.forEach { (key, value) in
             dictPairs.append((key, value))
         }
 
@@ -287,7 +287,9 @@ extension DictionaryOrderedModelTests.Unit {
             model[key] = value
         }
 
-        for i in 0..<orderedDict.count {
+        // `count` is the typed `Index<Key>.Count`; iterate via its Int width since the
+        // `subscript(index:)` and model both take plain Int indices.
+        for i in 0..<Int(bitPattern: orderedDict.count) {
             let dictPair = orderedDict[index: i]
             let modelPair = model.elements[i]
             #expect(dictPair.key == modelPair.key)
@@ -322,7 +324,7 @@ extension DictionaryOrderedModelTests.EdgeCase {
             #expect(orderedIndex == model.index(key))
         }
 
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == model.keys)
     }
 
     @Test
@@ -345,8 +347,8 @@ extension DictionaryOrderedModelTests.EdgeCase {
         orderedDict["b"] = 20
         model["b"] = 20
 
-        #expect(Array(orderedDict.keys) == ["a", "c", "d", "b"])
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == ["a", "c", "d", "b"])
+        #expect(toArray(orderedDict.keys) == model.keys)
         #expect(orderedDict["b"] == 20)
     }
 
@@ -400,7 +402,7 @@ extension DictionaryOrderedModelTests.EdgeCase {
 
         #expect(orderedDict.count == 2)
         #expect(!orderedDict.contains("b"))
-        #expect(Array(orderedDict.keys) == model.keys)
+        #expect(toArray(orderedDict.keys) == model.keys)
     }
 }
 
@@ -443,11 +445,11 @@ extension DictionaryOrderedModelTests.Integration {
                 break
             }
 
-            #expect(orderedDict.count == model.count)
+            #expect(Int(bitPattern: orderedDict.count) == model.count)
             #expect(orderedDict.isEmpty == model.isEmpty)
         }
 
-        let dictKeys = Array(orderedDict.keys)
+        let dictKeys = toArray(orderedDict.keys)
         #expect(dictKeys == model.keys)
 
         for key in model.keys {
@@ -487,7 +489,7 @@ extension DictionaryOrderedModelTests.Integration {
                 model.remove(key)
             }
 
-            #expect(Array(orderedDict.keys) == model.keys, "Keys mismatch after cycle \(cycle)")
+            #expect(toArray(orderedDict.keys) == model.keys, "Keys mismatch after cycle \(cycle)")
             for key in model.keys {
                 #expect(orderedDict[key] == model[key], "Value mismatch for \(key) after cycle \(cycle)")
             }

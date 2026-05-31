@@ -68,6 +68,18 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
     }
 }
 
+// MARK: - Error Typealias (Nest.Name API)
+//
+// Co-located with the type per [MOD-036]: `Bounded.Error` is the error type the
+// canonical `init(capacity:)` above throws, so its typealias belongs in the type
+// module alongside the init. (The growable base's `Dictionary.Ordered.Error` lives
+// in the type module's Dictionary.Ordered.Error.swift for the same reason.)
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded where Value: ~Copyable {
+    /// Errors that can occur during bounded ordered dictionary operations.
+    public typealias Error = __DictionaryOrderedBoundedError<Key>
+}
+
 // MARK: - Conditional Conformances
 
 /// `Dictionary.Ordered.Bounded` is `Copyable` when its values are `Copyable`.

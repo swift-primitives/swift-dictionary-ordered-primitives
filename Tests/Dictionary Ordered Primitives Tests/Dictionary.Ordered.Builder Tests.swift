@@ -30,8 +30,7 @@ extension DictionaryOrderedBuilderTests {
         _ dict: borrowing Dictionary<K, V>.Ordered
     ) -> [(K, V)] {
         var result: [(K, V)] = []
-        let keys = dict._keys
-        try! keys.forEach { key in
+        for key in toArray(dict.keys) {
             if let v = dict[key] {
                 result.append((key, v))
             }

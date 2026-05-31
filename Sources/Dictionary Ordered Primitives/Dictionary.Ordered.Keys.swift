@@ -10,6 +10,10 @@
 // ===----------------------------------------------------------------------===//
 
 public import Index_Primitives
+public import Iterable
+public import Iterator_Primitive
+public import Iterator_Chunk_Primitives
+public import Sequence_Primitives
 public import Set_Primitives
 
 // MARK: - Keys Accessor
@@ -98,34 +102,69 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys where Value: ~Copya
     }
 }
 
-// MARK: - Sequence Conformance
+// MARK: - Scalar iterator
+//
+// The Keys view yields keys one at a time by walking the underlying `Set<Key>.Ordered`
+// by index. Wrapped in `Iterator.Materializing` for the bulk `Iterable` face — the same
+// self-contained generator shape the parent dictionary uses, avoiding any reliance on
+// the underlying type's bridge-vended iterator overloads.
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys: Swift.Sequence {
-    public struct Iterator: Sequence.Iterator.`Protocol`, IteratorProtocol {
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys {
+    /// Single-pass scalar iterator over the keys in insertion order.
+    public struct Iterator: Iterator_Primitive.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline
-        var base: Set<Key>.Ordered.Iterator
+        let _keys: Set<Key>.Ordered
 
         @usableFromInline
-        init(_ keys: Set<Key>.Ordered) {
-            self.base = keys.makeIterator()
-        }
+        var _index: Index_Primitives.Index<Key>
 
-        @_lifetime(&self)
+        @usableFromInline
+        let _count: Index_Primitives.Index<Key>.Count
+
         @inlinable
-        public mutating func nextSpan(maximumCount: Cardinal) -> Span<Key> {
-            base.nextSpan(maximumCount: maximumCount)
+        init(_ keys: Set<Key>.Ordered) {
+            self._keys = keys
+            self._index = .zero
+            self._count = keys.count
         }
 
         @inlinable
         public mutating func next() -> Key? {
-            base.next()
+            guard _index < _count else { return nil }
+            let key = _keys[_index]
+            _index = _index + .one
+            return key
         }
-    }
-
-    @inlinable
-    public func makeIterator() -> Iterator {
-        Iterator(_keys)
     }
 }
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys.Iterator: Sendable where Key: Sendable {}
+
+// MARK: - Iterable (multipass, borrowing) — via materialising adapter
+//
+// Keys does NOT conform to `Swift.Sequence`: dropped to match the exemplar (the
+// deferred stdlib-interop axis).
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys: Iterable {
+    @_implements(Iterable, Iterator)
+    public typealias IterableIterator = Iterator_Primitive.Iterator.Materializing<Iterator>
+
+    @inlinable
+    @_lifetime(borrow self)
+    @_implements(Iterable, makeIterator())
+    public borrowing func iterableMakeIterator() -> Iterator_Primitive.Iterator.Materializing<Iterator> {
+        Iterator_Primitive.Iterator.Materializing(Iterator(_keys))
+    }
+}
+
+// MARK: - Sequenceable (single-pass, consuming)
+
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Keys: Sequenceable {
+    @_implements(Sequenceable, Iterator)
+    public typealias SequenceableIterator = Iterator
+
+    @inlinable
+    public consuming func makeIterator() -> Iterator {
+        Iterator(_keys)
+    }
+}

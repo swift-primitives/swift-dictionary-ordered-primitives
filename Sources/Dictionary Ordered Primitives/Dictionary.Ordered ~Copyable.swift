@@ -13,6 +13,8 @@ public import Buffer_Linear_Primitive
 public import Buffer_Linear_Bounded_Primitive
 public import Buffer_Linear_Small_Primitive
 public import Buffer_Linear_Inline_Primitives
+public import Dictionary_Ordered_Primitive
+public import Hash_Table_Static_Primitive
 public import Index_Primitives
 
 // MARK: - Initialization (~Copyable)
@@ -25,9 +27,11 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
     /// - Parameter capacity: Number of elements to reserve space for.
     @inlinable
     public init(reservingCapacity capacity: Index_Primitives.Index<Key>.Count) throws(Self.Error) {
-        self._keys = Set<Key>.Ordered()
+        // Delegate to the designated `init()` in the type module: a cross-module
+        // extension initializer cannot initialize stored properties directly.
+        self.init()
         self._keys.reserve(capacity)
-        self._values = Buffer<Value>.Linear(minimumCapacity: capacity.retag(Value.self))
+        self._values.reserveCapacity(capacity.retag(Value.self))
     }
 }
 
@@ -215,8 +219,8 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 // MARK: - Bounded Variant (~Copyable)
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded where Value: ~Copyable {
-    /// Errors that can occur during bounded ordered dictionary operations.
-    public typealias Error = __DictionaryOrderedBoundedError<Key>
+    // Note: `Bounded.Error` typealias is co-located with the type in the type module
+    // (Dictionary.Ordered.Bounded.swift) per [MOD-036] — the canonical init throws it.
 
     /// The number of key-value pairs.
     @inlinable
