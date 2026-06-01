@@ -16,6 +16,7 @@ public import Buffer_Linear_Inline_Primitives
 public import Dictionary_Ordered_Primitive
 public import Hash_Table_Static_Primitive
 public import Index_Primitives
+public import Finite_Bounded_Primitives
 
 // MARK: - Initialization (~Copyable)
 
