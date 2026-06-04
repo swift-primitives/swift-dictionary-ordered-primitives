@@ -177,7 +177,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
 // MARK: - Scalar iterator
 //
 // The Values view yields values one at a time by walking the underlying
-// `Buffer<Value>.Linear` by index. Wrapped in `Iterator.Materializing` for the bulk
+// `Buffer<Storage<Value>.Heap>.Linear` by index. Wrapped in `Iterator.Materializing` for the bulk
 // `Iterable` face — the same self-contained generator shape the parent dictionary uses,
 // avoiding any reliance on the underlying buffer's bridge-vended iterator overloads.
 
@@ -185,7 +185,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
     /// Single-pass scalar iterator over the values in insertion order.
     public struct Iterator: Iterator_Primitive.Iterator.`Protocol`, IteratorProtocol {
         @usableFromInline
-        let _values: Buffer<Value>.Linear
+        let _values: Buffer<Storage<Value>.Heap>.Linear
 
         @usableFromInline
         var _index: Index_Primitives.Index<Value>
@@ -194,7 +194,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
         let _count: Index_Primitives.Index<Value>.Count
 
         @inlinable
-        init(_ values: Buffer<Value>.Linear) {
+        init(_ values: Buffer<Storage<Value>.Heap>.Linear) {
             self._values = values
             self._index = .zero
             self._count = values.count
@@ -210,7 +210,10 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Values {
     }
 }
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered.Values.Iterator: Sendable where Value: Sendable {}
+// WHY: Category D — structural Sendable workaround; the iterator holds a
+// WHY: `Buffer<Storage<Value>.Heap>.Linear` whose Heap substrate is Sendable
+// WHY: due to a stored pointer, mirroring the parent container's conformance.
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Values.Iterator: @unsafe @unchecked Sendable where Value: Sendable {}
 
 // MARK: - Iterable (multipass, borrowing) — via materialising adapter
 //

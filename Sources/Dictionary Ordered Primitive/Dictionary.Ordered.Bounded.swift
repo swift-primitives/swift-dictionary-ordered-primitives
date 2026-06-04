@@ -47,7 +47,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
     public struct Bounded: ~Copyable {
         public var _keys: Set<Key>.Ordered
 
-        public var _values: Buffer<Value>.Linear.Bounded
+        public var _values: Buffer<Storage<Value>.Heap>.Linear.Bounded
 
         /// The maximum number of key-value pairs the dictionary can hold.
         public let capacity: Index_Primitives.Index<Key>.Count
@@ -60,7 +60,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
         public init(capacity: Index_Primitives.Index<Key>.Count) throws(Dictionary_Primitives_Core.Dictionary<Key, Value>.Ordered.Bounded.Error) {
             self._keys = Set<Key>.Ordered()
             self._keys.reserve(capacity)
-            self._values = Buffer<Value>.Linear.Bounded(minimumCapacity: capacity.retag(Value.self))
+            self._values = Buffer<Storage<Value>.Heap>.Linear.Bounded(minimumCapacity: capacity.retag(Value.self))
             self.capacity = capacity
         }
 

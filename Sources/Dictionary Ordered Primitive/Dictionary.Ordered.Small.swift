@@ -60,17 +60,17 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 
         /// Value storage using Buffer.Linear.Small — handles inline/heap dispatch internally.
         @usableFromInline
-        package var _values: Buffer<Value>.Linear.Small<inlineCapacity>
+        package var _values: Buffer<Storage<Value>.Heap>.Linear.Small<inlineCapacity>
 
         /// Dense key storage for inline mode.
         @usableFromInline
-        package var _inlineKeys: Buffer<Key>.Linear.Inline<inlineCapacity>
+        package var _inlineKeys: Buffer<Storage<Key>.Heap>.Linear.Inline<inlineCapacity>
 
         /// Creates an empty small ordered dictionary.
         @inlinable
         public init() {
-            self._values = Buffer<Value>.Linear.Small<inlineCapacity>()
-            self._inlineKeys = Buffer<Key>.Linear.Inline<inlineCapacity>()
+            self._values = Buffer<Storage<Value>.Heap>.Linear.Small<inlineCapacity>()
+            self._inlineKeys = Buffer<Storage<Key>.Heap>.Linear.Inline<inlineCapacity>()
             self._count = .zero
             self._heapKeys = nil
         }

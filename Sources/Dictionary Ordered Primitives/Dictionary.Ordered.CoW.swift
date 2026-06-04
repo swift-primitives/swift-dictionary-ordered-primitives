@@ -114,7 +114,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: Copyable {
         _keys.clear(keepingCapacity: keepingCapacity)
         _values.remove.all()
         if !keepingCapacity {
-            _values = Buffer<Value>.Linear(minimumCapacity: .zero)
+            _values = Buffer<Storage<Value>.Heap>.Linear(minimumCapacity: .zero)
         }
     }
 }

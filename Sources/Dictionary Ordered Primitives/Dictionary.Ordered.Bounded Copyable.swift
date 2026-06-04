@@ -34,7 +34,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded where Value: Cop
         let _keys: Set<Key>.Ordered
 
         @usableFromInline
-        let _values: Buffer<Value>.Linear.Bounded
+        let _values: Buffer<Storage<Value>.Heap>.Linear.Bounded
 
         @usableFromInline
         var _index: Index_Primitives.Index<Key>

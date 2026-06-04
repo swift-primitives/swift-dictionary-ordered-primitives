@@ -43,7 +43,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: Copyable {
         let _keys: Set<Key>.Ordered
 
         @usableFromInline
-        let _values: Buffer<Value>.Linear
+        let _values: Buffer<Storage<Value>.Heap>.Linear
 
         @usableFromInline
         var _index: Index_Primitives.Index<Key>
