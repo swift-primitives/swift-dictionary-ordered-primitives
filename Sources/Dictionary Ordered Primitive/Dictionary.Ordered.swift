@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Dictionary_Primitives_Core
 public import Set_Ordered_Primitive
 
@@ -89,21 +91,21 @@ extension Dictionary_Primitives_Core.Dictionary where Value: ~Copyable {
 
         // MARK: - Value Storage
         //
-        // Uses Buffer<Storage<Value>.Heap>.Linear from Buffer Linear Primitives for value storage.
+        // Uses Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear from Buffer Linear Primitives for value storage.
         // Buffer wraps Storage internally and provides the canonical data structure API.
 
         /// Typealias for value storage type.
-        public typealias ValueStorage = Buffer<Storage<Value>.Heap>.Linear
+        public typealias ValueStorage = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear
 
         public var _keys: Set<Key>.Ordered
 
-        public var _values: Buffer<Storage<Value>.Heap>.Linear
+        public var _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear
 
         /// Creates an empty ordered dictionary.
         @inlinable
         public init() {
             self._keys = Set<Key>.Ordered()
-            self._values = Buffer<Storage<Value>.Heap>.Linear(minimumCapacity: .zero)
+            self._values = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear(minimumCapacity: .zero)
         }
 
         // Note: No deinit needed - Buffer.Linear handles cleanup

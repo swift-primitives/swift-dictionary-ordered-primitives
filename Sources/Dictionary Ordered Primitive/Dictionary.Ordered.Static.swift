@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Inline_Primitives
 public import Dictionary_Primitives_Core
 public import Hash_Table_Static_Primitive
@@ -33,18 +35,18 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 
         /// Value storage using Buffer.Linear.Inline from buffer-primitives.
         @usableFromInline
-        package var _values: Buffer<Storage<Value>.Heap>.Linear.Inline<capacity>
+        package var _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear.Inline<capacity>
 
         /// Dense key storage using Buffer.Linear.Inline.
         @usableFromInline
-        package var _keys: Buffer<Storage<Key>.Heap>.Linear.Inline<capacity>
+        package var _keys: Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear.Inline<capacity>
 
         /// Creates an empty inline ordered dictionary.
         /// - Note: `capacity` must be a power of two (hash table requirement).
         @inlinable
         public init() {
-            self._values = Buffer<Storage<Value>.Heap>.Linear.Inline<capacity>()
-            self._keys = Buffer<Storage<Key>.Heap>.Linear.Inline<capacity>()
+            self._values = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear.Inline<capacity>()
+            self._keys = Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear.Inline<capacity>()
             self._hashTable = Hash.Table<Key>.Static<capacity>()
         }
 

@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitives_Core
 public import Index_Primitives
@@ -38,10 +40,10 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
         public typealias Element = (key: Key, value: Value)
 
         @usableFromInline
-        let _keys: Buffer<Storage<Key>.Heap>.Linear
+        let _keys: Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear
 
         @usableFromInline
-        let _values: Buffer<Storage<Value>.Heap>.Linear
+        let _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear
 
         @usableFromInline
         let _end: Index_Primitives.Index<Key>.Count
@@ -50,7 +52,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
         var _position: Index_Primitives.Index<Key> = .zero
 
         @usableFromInline
-        init(keys: Buffer<Storage<Key>.Heap>.Linear, values: Buffer<Storage<Value>.Heap>.Linear) {
+        init(keys: Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear, values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear) {
             self._keys = keys
             self._values = values
             self._end = keys.count
@@ -68,7 +70,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
 }
 
 // WHY: Category D — structural Sendable workaround; the iterator holds
-// WHY: `Buffer<Storage<{Key,Value}>.Heap>.Linear` whose Heap substrate is
+// WHY: `Buffer<Storage<{Key,Value}>.Contiguous<Memory.Heap<{Key,Value}>>>.Linear` whose Heap substrate is
 // WHY: Sendable due to a stored pointer, mirroring the parent container.
 extension Dictionary_Primitives_Core.Dictionary.Ordered.Static.Iterator: @unsafe @unchecked Sendable
 where Key: Sendable, Value: Sendable {}
@@ -79,8 +81,8 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Static where Value: Copy
     /// Builds parallel `Buffer.Linear` snapshots of the inline key/value storage.
     @inlinable
     func _snapshotIterator() -> Iterator {
-        var keySnapshot = Buffer<Storage<Key>.Heap>.Linear(minimumCapacity: _keys.count)
-        var valueSnapshot = Buffer<Storage<Value>.Heap>.Linear(minimumCapacity: _values.count)
+        var keySnapshot = Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear(minimumCapacity: _keys.count)
+        var valueSnapshot = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear(minimumCapacity: _values.count)
         var i: Index_Primitives.Index<Key> = .zero
         let end = _keys.count.map(Ordinal.init)
         while i < end {

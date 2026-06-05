@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Buffer_Linear_Small_Primitive
 public import Dictionary_Ordered_Primitive
@@ -114,7 +116,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: Copyable {
         _keys.clear(keepingCapacity: keepingCapacity)
         _values.remove.all()
         if !keepingCapacity {
-            _values = Buffer<Storage<Value>.Heap>.Linear(minimumCapacity: .zero)
+            _values = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear(minimumCapacity: .zero)
         }
     }
 }

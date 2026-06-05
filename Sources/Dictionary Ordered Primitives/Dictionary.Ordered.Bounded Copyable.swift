@@ -10,6 +10,8 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Memory_Heap_Primitives
+public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
 public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitives_Core
@@ -34,7 +36,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded where Value: Cop
         let _keys: Set<Key>.Ordered
 
         @usableFromInline
-        let _values: Buffer<Storage<Value>.Heap>.Linear.Bounded
+        let _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear.Bounded
 
         @usableFromInline
         var _index: Index_Primitives.Index<Key>
