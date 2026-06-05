@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Dictionary_Ordered_Primitive
-public import Storage_Small_Primitives
+public import Memory_Small_Primitives
 public import Dictionary_Primitives_Core
 public import Sequence_Primitives
 

@@ -10,7 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 internal import Set_Primitives
-public import Storage_Small_Primitives
+public import Memory_Small_Primitives
 
 // MARK: - Merge Accessor (Copyable values only)
 //
