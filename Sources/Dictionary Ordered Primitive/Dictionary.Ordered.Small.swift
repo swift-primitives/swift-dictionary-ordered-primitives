@@ -51,7 +51,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
     // WHY: Sendable due to a stored pointer / generic parameter shape.
     @safe
     public struct Small<let inlineCapacity: Int>: ~Copyable {
-        /// Element cleanup is handled by Storage.Inline's deinit (inline path) or Storage.Heap's deinit (spilled path).
+        /// Element cleanup is handled by Storage.Inline's deinit (inline path) or Storage.Contiguous<Memory.Heap>'s deinit (spilled path).
 
         @usableFromInline
         package var _count: Index_Primitives.Index<Key>.Count
