@@ -14,8 +14,6 @@ public import Memory_Small_Primitives
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
-public import Buffer_Linear_Small_Primitive
-public import Buffer_Linear_Inline_Primitives
 public import Dictionary_Ordered_Primitive
 public import Hash_Table_Static_Primitive
 public import Index_Primitives
