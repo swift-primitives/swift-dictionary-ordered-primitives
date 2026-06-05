@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Dictionary_Primitives_Core
+public import Storage_Small_Primitives
 
 extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 

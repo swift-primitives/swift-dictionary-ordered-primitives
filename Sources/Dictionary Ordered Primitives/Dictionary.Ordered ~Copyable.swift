@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Storage_Small_Primitives
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Bounded_Primitive
@@ -562,7 +563,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Small where Value: ~Copy
     /// Removes all key-value pairs.
     @inlinable
     public mutating func clear() {
-        _values.remove.all()
+        _values.removeAll()
         if _heapKeys != nil {
             _heapKeys!.clear(keepingCapacity: true)
         } else {

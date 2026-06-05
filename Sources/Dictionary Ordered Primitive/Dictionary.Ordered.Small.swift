@@ -10,6 +10,10 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Storage_Small_Primitives
+public import Storage_Primitive
+public import Buffer_Linear_Primitive
+public import Buffer_Linear_Primitives
 public import Memory_Heap_Primitives
 public import Storage_Contiguous_Primitives
 public import Buffer_Linear_Inline_Primitives
@@ -62,7 +66,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
 
         /// Value storage using Buffer.Linear.Small — handles inline/heap dispatch internally.
         @usableFromInline
-        package var _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear.Small<inlineCapacity>
+        package var _values: Buffer<Storage<Value>.Small<inlineCapacity>>.Linear
 
         /// Dense key storage for inline mode.
         @usableFromInline
@@ -71,7 +75,7 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: ~Copyable {
         /// Creates an empty small ordered dictionary.
         @inlinable
         public init() {
-            self._values = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear.Small<inlineCapacity>()
+            self._values = Buffer<Storage<Value>.Small<inlineCapacity>>.Linear()
             self._inlineKeys = Buffer<Storage<Key>.Contiguous<Memory.Heap<Key>>>.Linear.Inline<inlineCapacity>()
             self._count = .zero
             self._heapKeys = nil

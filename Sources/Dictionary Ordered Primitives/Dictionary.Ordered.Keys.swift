@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Index_Primitives
+public import Storage_Small_Primitives
 public import Iterable
 public import Iterator_Primitive
 public import Iterator_Chunk_Primitives

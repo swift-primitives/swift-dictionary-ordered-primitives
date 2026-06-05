@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Buffer_Linear_Primitive
+public import Storage_Small_Primitives
 public import Set_Primitives
 
 // MARK: - Keep Type (Copyable values only)

@@ -10,6 +10,7 @@
 // ===----------------------------------------------------------------------===//
 
 public import Dictionary_Primitives_Core
+public import Storage_Small_Primitives
 public import Buffer_Linear_Inline_Primitive
 
 extension Dictionary.Ordered where Value: Copyable {

@@ -58,6 +58,9 @@ let package = Package(
                 .product(name: "Buffer Linear Inline Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
+                // Cleave-3 #12a/#5a: Dictionary.Ordered.Small backs _values with Buffer<Storage<Value>.Small<n>>.Linear.
+                .product(name: "Storage Small Primitives", package: "swift-storage-primitives"),
+                .product(name: "Storage Primitive", package: "swift-storage-primitives"),
                 .product(name: "Buffer Linear Small Primitives", package: "swift-buffer-linear-primitives"),
                 .product(name: "Iterator Primitive", package: "swift-iterator-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
@@ -85,6 +88,9 @@ let package = Package(
                 .product(name: "Buffer Linear Inline Primitive", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Inline Primitives", package: "swift-buffer-linear-primitives"),
                 .product(name: "Buffer Linear Small Primitive", package: "swift-buffer-linear-primitives"),
+                // Cleave-3 #12a/#5a: Dictionary.Ordered.Small backs _values with Buffer<Storage<Value>.Small<n>>.Linear.
+                .product(name: "Storage Small Primitives", package: "swift-storage-primitives"),
+                .product(name: "Storage Primitive", package: "swift-storage-primitives"),
                 .product(name: "Iterator Primitive", package: "swift-iterator-primitives"),
                 .product(name: "Iterable", package: "swift-iterator-primitives"),
                 .product(name: "Iterator Chunk Primitives", package: "swift-iterator-primitives"),
