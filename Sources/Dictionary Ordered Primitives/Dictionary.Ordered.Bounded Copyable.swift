@@ -99,12 +99,10 @@ extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded: Sequenceable wh
     public var underestimatedCount: Int { Int(bitPattern: count) }
 }
 
-// MARK: - Sequence.Clearable Conformance
+// MARK: - removeAll()
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded: Sequence.Clearable where Value: Copyable {
+extension Dictionary_Primitives_Core.Dictionary.Ordered.Bounded where Value: Copyable {
     /// Removes all key-value pairs from the dictionary.
-    ///
-    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
     @inlinable
     public mutating func removeAll() {
         clear()

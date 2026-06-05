@@ -12,14 +12,11 @@
 public import Dictionary_Ordered_Primitive
 public import Memory_Small_Primitives
 public import Dictionary_Primitives_Core
-import Sequence_Primitives
 
-// MARK: - Sequence.Clearable Conformance
+// MARK: - removeAll()
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered: Sequence.Clearable where Value: Copyable {
+extension Dictionary_Primitives_Core.Dictionary.Ordered where Value: Copyable {
     /// Removes all key-value pairs from the dictionary.
-    ///
-    /// This enables `.forEach.consuming { }` pattern via `Property.Inout` extension.
     @inlinable
     public mutating func removeAll() {
         clear(keepingCapacity: false)
