@@ -45,7 +45,7 @@ let package = Package(
     ],
     targets: [
 
-        // MARK: - Type (ordered-dictionary type surface: Ordered + Bounded/Static/Small)
+        // MARK: - Type (ordered-dictionary type surface: Ordered + Bounded/Small)
         .target(
             name: "Dictionary Ordered Primitive",
             dependencies: [
