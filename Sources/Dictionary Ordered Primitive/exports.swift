@@ -9,6 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
-@_exported public import Dictionary_Primitives_Core
-@_exported public import Set_Ordered_Primitive
-@_exported public import Index_Primitives
+// Dictionary Ordered Primitive declares the base type: the column-generic
+// `Dictionary<S>.Ordered` template (the order-contracting sibling of
+// `Dictionary<S>`) plus its ordered index domain `Dictionary.Ordered.Index`.
+// The pinned keyed + positional surface lives in the umbrella target's
+// `Dictionary.Ordered+Columns.swift` / `Dictionary.Ordered+Positions.swift`.
+// No re-exports here — the namespace and column packages are ordinary
+// dependencies ([MOD-005]: umbrellas re-export in-package targets only).

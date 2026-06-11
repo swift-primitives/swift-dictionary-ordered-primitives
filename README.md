@@ -2,7 +2,7 @@
 
 ![Development Status](https://img.shields.io/badge/status-active--development-blue.svg)
 
-The **insertion-ordered dictionary discipline** over the `Dictionary` namespace: key-value storage that remembers the order pairs were inserted, in four capacity flavours — growable, bounded, inline, and small-buffer-optimized — all supporting noncopyable (`~Copyable`) values.
+The **order-contracting dictionary discipline** over the `Dictionary` namespace: the column-generic sibling of `Dictionary<S>` that contracts insertion order and exposes it — positions are insertion-order ranks, with positional access and a key → position door, alongside the full keyed surface.
 
 ---
 
@@ -10,34 +10,54 @@ The **insertion-ordered dictionary discipline** over the `Dictionary` namespace:
 
 ```swift
 import Dictionary_Ordered_Primitives
+import Dictionary_Primitive
+import Hash_Indexed_Primitive
+import Column_Primitives
+import Shared_Primitive
 
-// Build a registry in the order entries are recorded.
-var registry = Dictionary<String, Int>.Ordered()
-registry["gamma"]   = 3
-registry["alpha"]   = 1
-registry["beta"]    = 2
+// The CoW (value-semantic) column — Copyable, copies share until mutation.
+typealias Registry = Dictionary<
+    Shared<Hash.Entry<String, Int>, Hash.Indexed<Column.Heap<Hash.Entry<String, Int>>>>
+>.Ordered
+
+var registry = Registry()
+registry.insert(key: "gamma", value: 3)
+registry.insert(key: "alpha", value: 1)
+registry.insert(key: "beta",  value: 2)
 
 // Iteration follows insertion order — not hash order.
-for (name, priority) in registry {
-    print("\(name): \(priority)")
-}
+registry.forEach { name, priority in print("\(name): \(priority)") }
 // gamma: 3
 // alpha: 1
 // beta: 2
 
-// Updating an existing key does NOT change its position.
-registry["alpha"] = 100
-print(Array(registry.keys))   // ["gamma", "alpha", "beta"]
+// Positions are insertion-order ranks.
+registry.index(forKey: "alpha")     // rank 1
+registry.key(at: registry.index(forKey: "beta")!)   // "beta"
+registry.entry(at: .zero)           // (key: "gamma", value: 3)
 
-// Removing a key and re-inserting moves it to the end.
-registry.values.remove("gamma")
-registry["gamma"] = 30
-print(Array(registry.keys))   // ["alpha", "beta", "gamma"]
+// Updating an existing key keeps its rank; the displaced value hands back.
+let displaced = registry.insert(key: "alpha", value: 100)   // 1
 
-// Merge incoming pairs, keeping the first value for duplicate keys.
-registry.merge.keep.first([("beta", 999), ("delta", 4)])
-print(registry["beta"])        // Optional(2)  — original value kept
-print(registry["delta"])       // Optional(4)  — new key appended
+// Removal preserves the order of the rest; re-insertion appends at the end.
+registry.removeValue(forKey: "gamma")
+registry.insert(key: "gamma", value: 30)    // now at the last rank
+
+// Values mutate in place behind the hash-stable key — by key or by rank.
+registry.withMutableValue(forKey: "beta") { $0 += 1 }
+registry.withMutableValue(at: .zero) { $0 += 1 }
+```
+
+The default column is MOVE-ONLY (zero-cost, supports `~Copyable` values):
+
+```swift
+struct FileHandle: ~Copyable { /* … */ }
+
+var handles = Dictionary<
+    Hash.Indexed<Column.Heap<Hash.Entry<String, FileHandle>>>
+>.Ordered()
+handles.insert(key: "primary", value: FileHandle())
+handles.withValue(forKey: "primary") { handle in /* borrow */ }
 ```
 
 ---
@@ -65,37 +85,44 @@ and macOS 26 / iOS 26 / tvOS 26 / watchOS 26 / visionOS 26 (or the matching Linu
 
 ---
 
-## Variants
+## Surface
 
-| Type                              | Storage              | Reach for it when                                      |
-|-----------------------------------|----------------------|--------------------------------------------------------|
-| `Dictionary<K, V>.Ordered`        | heap, growable       | the number of entries isn't known up front             |
-| `Dictionary<K, V>.Ordered.Bounded`| heap, fixed maximum  | there is a hard capacity ceiling; throws on overflow   |
-| `Dictionary<K, V>.Ordered.Static<n>` | inline, compile-time capacity | the maximum is small and fixed at compile time |
-| `Dictionary<K, V>.Ordered.Small<n>`  | inline → heap        | usually small, occasionally larger (SBO)           |
+| Doors | Operations |
+|-------|------------|
+| Keyed (mirrors `Dictionary<S>`) | `insert(key:value:)` (displaced-value hand-back), `contains(key:)`, `withValue(forKey:)`, `withMutableValue(forKey:)`, `removeValue(forKey:)` (order-preserving), `removeAll`, `forEach` (insertion order), `clone` |
+| Ordered (this package's contract) | `Index` (the ordered index domain), `index(forKey:)`, `key(at:)`, `value(at:)`, `entry(at:)`, `withValue(at:)`, `withMutableValue(at:)` |
 
-Every variant is generic over `Key: Hashable` and `Value`, including noncopyable value types.
-`Dictionary.Ordered` and `.Bounded` are conditionally `Copyable` when `Value: Copyable`;
-`.Static` and `.Small` are unconditionally `~Copyable`.
+The order contract: position `0` is the oldest live entry; updating an existing key keeps its
+rank; removing an entry shifts every later rank down by one; re-insertion after removal appends
+at the end. Keys are immutable — values mutate in place behind a hash-stable key.
+
+Copyability flows from the column (S5): the direct `Hash.Indexed` column is move-only; the
+`Shared`-wrapped composite is `Copyable` with explicit copy-on-write value semantics.
 
 ---
 
 ## Architecture
 
-Each variant ships as **two modules**: a lean type module (`Dictionary Ordered Primitive`) containing
-the value types and their core storage operations, and a conformances module (`Dictionary Ordered
-Primitives`) containing `Sequence`, `Collection`, `merge`, `keys`, and `values` accessors — kept
-separate so they never force a `Copyable` constraint on noncopyable use. Importing
-`Dictionary Ordered Primitives` (the umbrella) brings in the complete package; importing
-`Dictionary Ordered Primitive` brings in just the type surface.
+`Dictionary<S>.Ordered` composes the same ordered hashed entry column as the base
+`Dictionary<S>` ([swift-dictionary-primitives](https://github.com/swift-primitives/swift-dictionary-primitives)):
+`Hash.Indexed<Dense>` with key-projected `Hash.Entry<Key, Value>` elements — entries live densely
+in insertion order; the hash side is the bucket position-index engine. Positions ARE the dense
+slots, so positional access is O(1) and `index(forKey:)` is the engine's O(1)-average
+projected-key probe. The base `Dictionary<S>`'s contract is keyed; `Ordered` is where the
+positional promise lives.
+
+The package ships as **two modules**: a lean type module (`Dictionary Ordered Primitive`)
+declaring the `@frozen` template, its column-pinned constructors, and the ordered index domain;
+and the umbrella (`Dictionary Ordered Primitives`) carrying the pinned keyed + positional doors.
 
 ---
 
 ## Related Packages
 
-- `swift-set-ordered-primitives` — the insertion-ordered set discipline that backs key storage in every `Dictionary.Ordered` variant.
-- `swift-buffer-linear-primitives` — the linear buffer discipline used for contiguous value storage.
-- `swift-dictionary-primitives` — the `Dictionary` namespace and core protocol definitions.
+- `swift-dictionary-primitives` — the base `Dictionary<S>` ADT and the `Hash.Entry` element vocabulary.
+- `swift-hash-table-primitives` — `Hash.Indexed`, the ordered hashed column, and its bucket engine.
+- `swift-column-primitives` — the `Column` spelling vocabulary (`Column.Heap` et al.).
+- `swift-shared-primitives` — `Shared`, the explicit copy-on-write column wrapper.
 
 ---
 

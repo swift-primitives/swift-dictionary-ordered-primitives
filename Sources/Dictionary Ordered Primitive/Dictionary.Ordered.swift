@@ -9,118 +9,125 @@
 //
 // ===----------------------------------------------------------------------===//
 
+public import Dictionary_Primitive
+public import Hash_Indexed_Primitive
+public import Hash_Primitives
+public import Shared_Primitive
+public import Column_Primitives
+public import Buffer_Primitive
 public import Buffer_Linear_Primitive
-public import Memory_Small_Primitives
-public import Memory_Heap_Primitives
+public import Storage_Primitive
 public import Storage_Contiguous_Primitives
-public import Dictionary_Primitives_Core
-public import Set_Ordered_Primitive
+public import Memory_Heap_Primitives
+public import Memory_Allocator_Primitive
+public import Index_Primitives
 
-extension Dictionary_Primitives_Core.Dictionary where Value: ~Copyable {
+// MARK: - Dictionary.Ordered (the ORDER-CONTRACTING ADT over the same ordered
+// hashed entry column the base `Dictionary<S>` composes)
 
-    /// An ordered dictionary that preserves insertion order, supporting move-only values.
+extension Dictionary_Primitive.Dictionary where S: ~Copyable {
+    /// The insertion-ordered dictionary DISCIPLINE — the sibling template of
+    /// `Dictionary<S>` over the same ordered hashed entry column (the W5 ordered
+    /// round of the ADT-families reshape; the old element-keyed
+    /// `Dictionary<Key, Value>.Ordered` over `Set.Ordered` + a parallel value
+    /// plane is retired).
     ///
-    /// `Ordered` combines the key-value semantics of a dictionary with the ordering
-    /// guarantees of an array. Key-value pairs are stored in insertion order and
-    /// can be accessed by index.
+    /// `Dictionary<S>` already iterates in insertion order (today's column is
+    /// `Hash.Indexed`), but the base ADT's contract is KEYED — it exposes no
+    /// positions. `Ordered` is where the order-facing surface lives:
     ///
-    /// ## API
+    ///   • the ordered index domain (``Dictionary/Ordered/Index``: positions are
+    ///     insertion-order ranks `0 ..< count`),
+    ///   • positional access (`key(at:)`, `value(at:)`, `entry(at:)`,
+    ///     `withValue(at:)`, `withMutableValue(at:)`),
+    ///   • the key → position door (`index(forKey:)`),
     ///
-    /// Key operations use nested accessors:
+    /// alongside the full keyed surface mirrored from `Dictionary<S>`.
+    ///
+    /// The ratified two-column design: `Ordered` is generic over `S`, and
+    /// **copyability flows from the column** (S5):
     ///
     /// ```swift
-    /// var dict = Dictionary<String, Int>.Ordered()
-    ///
-    /// // Value operations
-    /// dict.values.set("apple", 1)
-    /// dict.values.set("banana", 2)
-    /// let removed = dict.values.remove("apple")
-    ///
-    /// // Key operations
-    /// if let idx = dict.keys.index("banana") { ... }
-    ///
-    /// // Subscript access
-    /// dict["cherry"] = 3
-    /// let value = dict["cherry"]
+    /// Dictionary<                       Hash.Indexed<Column.Heap<Hash.Entry<Key, FD >>>>.Ordered   // zero-cost MOVE-ONLY (default)
+    /// Dictionary<Shared<Hash.Entry<…>,  Hash.Indexed<Column.Heap<Hash.Entry<Key, Int>>>>>.Ordered  // explicit CoW value semantics
     /// ```
     ///
-    /// ## Ordering Semantics
+    /// The column is `Hash.Indexed<Dense>` with `Dense.Element == Hash.Entry<Key,
+    /// Value>`: entries live DENSELY in insertion order; the hash side is the
+    /// bucket position-index engine (tombstone-free backward shift, per-instance
+    /// seed). Positions ARE the dense slots, so positional access is O(1) and the
+    /// engine's `position(matching:)` doubles as `index(forKey:)`. `Shared` wraps
+    /// the COMPOSITE — one box, one clone strategy.
     ///
-    /// - Setting a new key adds to the end
-    /// - Updating existing key does NOT move position
-    /// - Removal shifts subsequent pairs (indices change)
-    /// - Re-insertion after removal goes to end
-    ///
-    /// ## Move-Only Support
-    ///
-    /// Both the dictionary and its values can be `~Copyable`:
-    ///
-    /// ```swift
-    /// struct FileHandle: ~Copyable { ... }
-    /// var dict = Dictionary<String, FileHandle>.Ordered()
-    /// dict.set("primary", FileHandle())
-    /// ```
-    ///
-    /// Note: Keys must always be `Hashable` (which implies `Copyable`).
-    ///
-    /// ## Copy-on-Write
-    ///
-    /// When `Value` is `Copyable`, `Dictionary.Ordered` uses copy-on-write semantics:
-    /// copies share storage until mutation.
-    ///
-    /// ## Thread Safety
-    ///
-    /// Not thread-safe for concurrent mutation. Synchronize externally.
-    ///
-    /// ## Complexity
-    ///
-    /// - Set/get/remove by key: O(1) average
-    /// - Index lookup: O(1) average
-    /// - Random access by index: O(1)
-    ///
-    /// ## Variants
-    ///
-    /// - ``Dictionary/Ordered``: Dynamically-growing storage (this type)
-    /// - ``Dictionary/Ordered/Bounded``: Fixed-capacity, throws on overflow
-    /// - ``Dictionary/Ordered/Inline``: Zero-allocation inline storage with compile-time capacity
-    /// - ``Dictionary/Ordered/Small``: Inline storage with automatic spill to heap
-    // WHY: Category D — structural Sendable workaround; the type is
-    // WHY: structurally value-safe but the compiler cannot synthesize
-    // WHY: Sendable due to a stored pointer / generic parameter shape.
-    @safe
+    /// Keys are immutable; values mutate in place behind a hash-stable key
+    /// (`withMutableValue` — mutability ruling (a)). Updating an existing key
+    /// keeps its position; removal preserves the order of the remaining entries
+    /// (positions after the removal point shift down by one); re-insertion after
+    /// removal appends at the end.
+    @frozen
     public struct Ordered: ~Copyable {
 
-        // MARK: - Value Storage
-        //
-        // Uses Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear from Buffer Linear Primitives for value storage.
-        // Buffer wraps Storage internally and provides the canonical data structure API.
+        /// The ordered hashed entry column — move-only (the default ownership
+        /// column) or a `Shared` CoW column. The ADT is a thin keyed-plus-ordered
+        /// discipline over it; it carries NO deinit.
+        @usableFromInline
+        package var store: S
 
-        /// Typealias for value storage type.
-        public typealias ValueStorage = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear
-
-        public var _keys: Set<Key>.Ordered
-
-        public var _values: Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear
-
-        /// Creates an empty ordered dictionary.
+        /// Wraps an existing column.
         @inlinable
-        public init() {
-            self._keys = Set<Key>.Ordered()
-            self._values = Buffer<Storage<Value>.Contiguous<Memory.Heap<Value>>>.Linear(minimumCapacity: .zero)
+        public init(store: consuming S) {
+            self.store = store
         }
 
-        // Note: No deinit needed - Buffer.Linear handles cleanup
+        /// Consumes the ordered dictionary, yielding its storage column.
+        @inlinable
+        public consuming func take() -> S {
+            store
+        }
     }
 }
 
-// MARK: - Conditional Conformances
+// MARK: - Conditional Conformances (co-located per [COPY-FIX-004])
 
-/// `Dictionary.Ordered` is `Copyable` when its values are `Copyable`.
-///
-/// This enables value semantics with copy-on-write optimization:
-/// copies share storage until mutation.
-extension Dictionary_Primitives_Core.Dictionary.Ordered: Copyable where Value: Copyable {}
+/// The S5 chain: `Dictionary<Shared<Hash.Entry<K, V>, B>>.Ordered` is `Copyable`
+/// exactly when the entry is.
+extension Dictionary_Primitive.Dictionary.Ordered: Copyable where S: Copyable {}
 
-// MARK: - Sendable
+extension Dictionary_Primitive.Dictionary.Ordered: Sendable where S: Sendable & ~Copyable {}
 
-extension Dictionary_Primitives_Core.Dictionary.Ordered: @unsafe @unchecked Sendable where Key: Sendable, Value: Sendable {}
+// MARK: - Column-pinned construction ([MEM-COPY-017]: the split lives in `Shared`'s
+// pinned constructor pair; the `Ordered` forms pick the column)
+
+extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+    /// Creates an empty MOVE-ONLY ordered dictionary (the default ownership column).
+    @inlinable
+    public init<K: Hash.Key & ~Copyable, V: ~Copyable>(
+        minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
+    )
+    where S == Hash.Indexed<Column.Heap<Hash.Entry<K, V>>> {
+        self.init(store: S(minimumCapacity: minimumCapacity))
+    }
+
+    /// Creates an empty CoW (value-semantic) ordered dictionary on the `Shared` column.
+    @inlinable
+    public init<K: Hash.Key, V>(
+        minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
+    )
+    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        self.init(store: Shared(
+            Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
+        ))
+    }
+
+    /// Creates an empty statically-unique ordered dictionary of move-only values
+    /// on the `Shared` column (the boxed flavor of the move-only regime).
+    @inlinable
+    public init<K: Hash.Key & ~Copyable, V: ~Copyable>(
+        minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
+    )
+    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        self.init(store: Shared(
+            Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
+        ))
+    }
+}

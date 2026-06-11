@@ -9,611 +9,405 @@
 //
 // ===----------------------------------------------------------------------===//
 
-import Index_Primitives_Test_Support
-import Tagged_Primitives_Test_Support
+import Dictionary_Ordered_Primitives
+import Dictionary_Primitive
+import Hash_Table_Primitives_Test_Support
+import Buffer_Primitives_Test_Support
+import Hash_Indexed_Primitive
+import Hash_Primitives
+import Hash_Primitives_Standard_Library_Integration
+import Shared_Primitive
+import Column_Primitives
+import Index_Primitives
+import Tagged_Primitives_Standard_Library_Integration
+import Ordinal_Primitives_Standard_Library_Integration
 import Testing
 
-@testable import Dictionary_Ordered_Primitives
+// The ordered-dictionary suite: the same ordered hashed entry column as the base
+// `Dictionary<S>`, with the ORDER CONTRACT under test — positions are
+// insertion-order ranks; updates keep rank; removal shifts; reinsertion appends.
 
-// MARK: - Dictionary.Ordered Tests
-//
-// [TEST-004] Generic type specializations use parallel namespace pattern due to
-// Swift Testing discovery limitation. See swiftlang/swift-testing#1508.
+private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
+    Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
-@Suite("Dictionary.Ordered")
-struct DictionaryOrderedTests {
-    @Suite struct Unit {}
-    @Suite struct EdgeCase {}
-    @Suite struct Integration {}
-    @Suite(.serialized) struct Performance {}
+private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<EntryColumn<K, V>>.Ordered
+private typealias CoWOrdered<K: Hash.Key, V> = Dictionary<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>.Ordered
+
+/// The position at insertion-order rank `n` (runtime construction; the ordered
+/// index domain is entry-tagged).
+private func rank(_ n: UInt) -> Index<Hash.Entry<Int, Int>> {
+    Index(Ordinal(n))
 }
 
-// MARK: - Unit Tests
+// MARK: - [DS-024] + coherence (the Shared entry composite is this family's column)
 
-extension DictionaryOrderedTests.Unit {
-
-    @Test
-    func `Set and get values`() {
-        var dict = Dictionary<String, Int>.Ordered()
-
-        dict.values.set("apple", 1)
-        dict.values.set("banana", 2)
-        dict.values.set("cherry", 3)
-
-        #expect(dict["apple"] == 1)
-        #expect(dict["banana"] == 2)
-        #expect(dict["cherry"] == 3)
-        #expect(dict["durian"] == nil)
-    }
+@Suite
+struct OrderedColumnLawTests {
 
     @Test
-    func `Subscript set and get`() {
-        var dict = Dictionary<String, Int>.Ordered()
-
-        dict["a"] = 1
-        dict["b"] = 2
-
-        #expect(dict["a"] == 1)
-        #expect(dict["b"] == 2)
-
-        // Update
-        dict["a"] = 10
-        #expect(dict["a"] == 10)
-
-        // Remove via nil
-        dict["b"] = nil
-        #expect(dict["b"] == nil)
-        #expect(dict.count == 1)
-    }
-
-    @Test
-    func `Remove value`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        let removed = dict.values.remove("b")
-        #expect(removed == 2)
-        #expect(dict.count == 2)
-        #expect(!dict.contains("b"))
-
-        // Keys.index should be updated
-        let indexC: Index<String>? = dict.keys.index("c")
-        #expect(indexC == 1)
-    }
-
-    @Test
-    func `Keys index lookup`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["first"] = 1
-        dict["second"] = 2
-        dict["third"] = 3
-
-        let indexFirst: Index<String>? = dict.keys.index("first")
-        let indexSecond: Index<String>? = dict.keys.index("second")
-        let indexThird: Index<String>? = dict.keys.index("third")
-        let indexFourth: Index<String>? = dict.keys.index("fourth")
-        #expect(indexFirst == 0)
-        #expect(indexSecond == 1)
-        #expect(indexThird == 2)
-        #expect(indexFourth == nil)
-    }
-
-    @Test
-    func `Insertion order preserved`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["charlie"] = 3
-        dict["alpha"] = 1
-        dict["bravo"] = 2
-
-        let keys = toArray(dict.keys)
-        #expect(keys == ["charlie", "alpha", "bravo"])
-    }
-
-    @Test
-    func `Update does not change order`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        // Update middle element
-        dict["b"] = 20
-
-        let keys = toArray(dict.keys)
-        #expect(keys == ["a", "b", "c"])
-        #expect(dict["b"] == 20)
-    }
-
-    @Test
-    func `Values modify`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["counter"] = 0
-
-        dict.values.modify("counter") { $0 += 1 }
-        dict.values.modify("counter") { $0 += 1 }
-
-        #expect(dict["counter"] == 2)
-    }
-
-    @Test
-    func `Merge keep first`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        dict.merge.keep.first([("b", 20), ("c", 3)])
-
-        #expect(dict["a"] == 1)
-        #expect(dict["b"] == 2)  // Kept first
-        #expect(dict["c"] == 3)
-    }
-
-    @Test
-    func `Merge keep last`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        dict.merge.keep.last([("b", 20), ("c", 3)])
-
-        #expect(dict["a"] == 1)
-        #expect(dict["b"] == 20)  // Kept last
-        #expect(dict["c"] == 3)
-
-        // Order should be preserved (b was updated, not re-inserted)
-        let keys = toArray(dict.keys)
-        #expect(keys == ["a", "b", "c"])
-    }
-
-    @Test
-    func `Init from pairs`() throws {
-        let dict = try Dictionary<String, Int>.Ordered([
-            ("a", 1),
-            ("b", 2),
-            ("c", 3),
-        ])
-
-        #expect(dict.count == 3)
-        #expect(dict["a"] == 1)
-        #expect(dict["b"] == 2)
-        #expect(dict["c"] == 3)
-    }
-
-    @Test
-    func `Init with uniquing closure`() {
-        let dict = Dictionary<String, Int>.Ordered(
-            [("a", 1), ("b", 2), ("a", 10)],
-            uniquingKeysWith: { $0 + $1 }
+    func `the shared entry column obeys the seam ledger laws`() {
+        let violations = Seam.Ledger.violations(
+            makeEmpty: { Shared(EntryColumn<Int, Int>(minimumCapacity: Index<Hash.Entry<Int, Int>>.Count(4))) },
+            element: { Hash.Entry(key: $0, value: $0) }
         )
-
-        #expect(dict["a"] == 11)  // 1 + 10
-        #expect(dict["b"] == 2)
+        #expect(violations.isEmpty, "\(violations)")
     }
 
     @Test
-    func `Index access`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        let pair = dict[index: 1]
-        #expect(pair.key == "b")
-        #expect(pair.value == 2)
-    }
-
-    @Test
-    func `Iteration`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["x"] = 10
-        dict["y"] = 20
-        dict["z"] = 30
-
-        var keys: [String] = []
-        var values: [Int] = []
-        dict.forEach { (key, value) in
-            keys.append(key)
-            values.append(value)
+    func `coherence holds through the ordered surface`() {
+        var direct = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        var i = 0
+        while i < 16 {
+            direct.insert(key: i &* 3, value: i)
+            i += 1
         }
-
-        #expect(keys == ["x", "y", "z"])
-        #expect(values == [10, 20, 30])
-    }
-
-    @Test
-    func `Empty dictionary`() {
-        let dict = Dictionary<String, Int>.Ordered()
-        #expect(dict.isEmpty)
-    }
-
-    @Test
-    func `Clear`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        dict.clear()
-
-        #expect(dict.isEmpty)
-    }
-
-    @Test
-    func `Contains`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["apple"] = 1
-
-        #expect(dict.contains("apple"))
-        #expect(!dict.contains("banana"))
-    }
-
-    @Test
-    func `Equality`() {
-        var a = Dictionary<String, Int>.Ordered()
-        a["x"] = 1
-        a["y"] = 2
-
-        var b = Dictionary<String, Int>.Ordered()
-        b["x"] = 1
-        b["y"] = 2
-
-        var c = Dictionary<String, Int>.Ordered()
-        c["y"] = 2
-        c["x"] = 1  // Different order
-
-        #expect(a == b)
-        #expect(a != c)  // Order matters
+        _ = direct.removeValue(forKey: 9)
+        _ = direct.removeValue(forKey: 0)
+        direct.insert(key: 6, value: 99)         // replacement: value swaps behind a stable key
+        direct.withMutableValue(at: rank(0)) { $0 &+= 1 }      // positional value mutation: no re-index
+        let violations = direct.take().checkCoherence()
+        #expect(violations.isEmpty, "\(violations)")
     }
 }
 
-// MARK: - Edge Case Tests
+extension Hash.Indexed<Column.Heap<Hash.Entry<Int, Int>>> {
+    fileprivate borrowing func checkCoherence() -> [String] {
+        Hash.Coherence.violations(self)
+    }
+}
 
-extension DictionaryOrderedTests.EdgeCase {
+// MARK: - Core keyed ops (the direct column)
+
+@Suite(.serialized)
+struct OrderedCoreTests {
 
     @Test
-    func `Init throws on duplicate`() {
-        #expect(throws: Dictionary<String, Int>.Ordered.Error.self) {
-            _ = try Dictionary<String, Int>.Ordered([
-                ("a", 1),
-                ("b", 2),
-                ("a", 3),  // Duplicate
-            ])
-        }
+    func `insert, displaced hand-back, contains, removeValue, counts`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        let isEmpty = d.isEmpty
+        #expect(isEmpty)
+        let fresh = d.insert(key: 10, value: 100)
+        #expect(fresh == nil)
+        let displaced = d.insert(key: 10, value: 101)
+        #expect(displaced == 100)
+        d.insert(key: 20, value: 200)
+        d.insert(key: 30, value: 300)
+        let has = d.contains(key: 20), hasNot = d.contains(key: 40)
+        #expect(has)
+        #expect(!hasNot)
+        let removed = d.removeValue(forKey: 20)
+        #expect(removed == 200)
+        let absent = d.removeValue(forKey: 20)
+        #expect(absent == nil)
+        let n = d.count
+        #expect(n == Index<Hash.Entry<Int, Int>>.Count(2))
     }
 
     @Test
-    func `Init throws on duplicate preserves partial state correctly`() {
-        // When init throws, no dictionary is created
-        // This test verifies the error contains correct information
+    func `withValue reads; withMutableValue mutates in place behind the stable key`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 1, value: 10)
+        let read = d.withValue(forKey: 1) { $0 }
+        #expect(read == 10)
+        let missing = d.withValue(forKey: 2) { $0 }
+        #expect(missing == nil)
+        let old = d.withMutableValue(forKey: 1) { value -> Int in
+            let was = value
+            value += 5
+            return was
+        }
+        #expect(old == 10)
+        let now = d.withValue(forKey: 1) { $0 }
+        #expect(now == 15)
+        let absent: Void? = d.withMutableValue(forKey: 9) { $0 += 1 }
+        #expect(absent == nil)
+    }
+
+    @Test
+    func `iteration is insertion-ordered across growth, removal, and replacement`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 2)
+        var i = 0
+        while i < 12 {
+            d.insert(key: i, value: i &* 10)
+            i += 1
+        }
+        _ = d.removeValue(forKey: 5)
+        d.insert(key: 3, value: 999)             // replacement keeps the slot's order
+        var keys: [Int] = []
+        d.forEach { key, _ in keys.append(key) }
+        #expect(keys == [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11])
+        let replaced = d.withValue(forKey: 3) { $0 }
+        #expect(replaced == 999)
+    }
+
+    @Test
+    func `removeAll empties; reuse works; direct clone detaches`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 1, value: 10)
+        d.insert(key: 2, value: 20)
+        var c = d.clone()
+        _ = c.removeValue(forKey: 1)
+        let mineHas = d.contains(key: 1), theirsHas = c.contains(key: 1)
+        #expect(mineHas)
+        #expect(!theirsHas)
+        d.removeAll()
+        let isEmpty = d.isEmpty
+        #expect(isEmpty)
+        d.insert(key: 7, value: 70)
+        let v7 = d.withValue(forKey: 7) { $0 }
+        #expect(v7 == 70)
+    }
+}
+
+// MARK: - The order contract (positions are insertion-order ranks)
+
+@Suite(.serialized)
+struct OrderedPositionTests {
+
+    @Test
+    func `index(forKey:) is the rank; misses are nil`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 10, value: 1)
+        d.insert(key: 20, value: 2)
+        d.insert(key: 30, value: 3)
+        #expect(d.index(forKey: 10) == rank(0))
+        #expect(d.index(forKey: 20) == rank(1))
+        #expect(d.index(forKey: 30) == rank(2))
+        #expect(d.index(forKey: 40) == nil)
+        let zero: Dictionary<EntryColumn<Int, Int>>.Ordered.Index = .zero
+        #expect(d.index(forKey: 10) == zero)     // the ordered index domain typealias
+    }
+
+    @Test
+    func `updates keep rank; removal shifts later ranks down; reinsertion appends`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 10, value: 1)
+        d.insert(key: 20, value: 2)
+        d.insert(key: 30, value: 3)
+        d.insert(key: 20, value: 22)             // update: rank 1 stays
+        #expect(d.index(forKey: 20) == rank(1))
+        _ = d.removeValue(forKey: 10)            // ranks after the removal point shift
+        #expect(d.index(forKey: 20) == rank(0))
+        #expect(d.index(forKey: 30) == rank(1))
+        d.insert(key: 10, value: 111)            // reinsertion goes to the end
+        #expect(d.index(forKey: 10) == rank(2))
+        var keys: [Int] = []
+        d.forEach { key, _ in keys.append(key) }
+        #expect(keys == [20, 30, 10])
+    }
+
+    @Test
+    func `key(at:), value(at:), entry(at:) read the rank; withValue(at:) borrows`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 7, value: 70)
+        d.insert(key: 8, value: 80)
+        let k0 = d.key(at: rank(0))
+        #expect(k0 == 7)
+        let v1 = d.value(at: rank(1))
+        #expect(v1 == 80)
+        let e = d.entry(at: rank(0))
+        #expect(e.key == 7)
+        #expect(e.value == 70)
+        let borrowed = d.withValue(at: rank(1)) { $0 }
+        #expect(borrowed == 80)
+    }
+
+    @Test
+    func `withMutableValue(at:) mutates the value; the key keeps its rank`() {
+        var d = MoveOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 7, value: 70)
+        d.insert(key: 8, value: 80)
+        let was = d.withMutableValue(at: rank(0)) { value -> Int in
+            let old = value
+            value += 1
+            return old
+        }
+        #expect(was == 70)
+        let now = d.value(at: rank(0))
+        #expect(now == 71)
+        #expect(d.index(forKey: 7) == rank(0))   // hash-stable: rank survived
+        let k = d.key(at: rank(0))
+        #expect(k == 7)
+    }
+
+    @Test
+    func `the positional doors agree on the shared column`() {
+        var d = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        d.insert(key: 10, value: 1)
+        d.insert(key: 20, value: 2)
+        d.insert(key: 30, value: 3)
+        _ = d.removeValue(forKey: 20)
+        #expect(d.index(forKey: 30) == rank(1))
+        let k1 = d.key(at: rank(1))
+        #expect(k1 == 30)
+        let v0 = d.value(at: rank(0))
+        #expect(v0 == 1)
+        let e = d.entry(at: rank(1))
+        #expect(e.key == 30)
+        #expect(e.value == 3)
+        let borrowed = d.withValue(at: rank(0)) { $0 }
+        #expect(borrowed == 1)
+        var keys: [Int] = []
+        d.forEach { key, _ in keys.append(key) }
+        #expect(keys == [10, 30])
+    }
+}
+
+// MARK: - CoW value semantics (the Shared composite column)
+
+@Suite(.serialized)
+struct OrderedCoWTests {
+
+    @Test
+    func `copies share until mutation; inserts detach through the box`() {
+        var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        a.insert(key: 1, value: 10)
+        let b = a                                // S5: Ordered is Copyable because S is
+        a.insert(key: 2, value: 20)              // withUnique(consuming:) detaches first
+        let mine = a.count, theirs = b.count
+        #expect(mine == Index<Hash.Entry<Int, Int>>.Count(2))
+        #expect(theirs == Index<Hash.Entry<Int, Int>>.Count(1))
+        let aHas2 = a.contains(key: 2), bHas2 = b.contains(key: 2)
+        #expect(aHas2)
+        #expect(!bHas2)
+    }
+
+    @Test
+    func `positional value mutation detaches; the sibling keeps its value and order`() {
+        var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        a.insert(key: 1, value: 10)
+        a.insert(key: 2, value: 20)
+        let b = a
+        a.withMutableValue(at: rank(0)) { $0 = 11 }
+        let mine = a.value(at: rank(0)), theirs = b.value(at: rank(0))
+        #expect(mine == 11)
+        #expect(theirs == 10)
+        let keyed = a.withMutableValue(forKey: 2) { value -> Int in
+            value = 22
+            return value
+        }
+        #expect(keyed == 22)
+        let bKept = b.withValue(forKey: 2) { $0 }
+        #expect(bKept == 20)
+    }
+
+    @Test
+    func `removal detaches; the sibling keeps the entry; generic clone detaches`() {
+        var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        a.insert(key: 1, value: 10)
+        a.insert(key: 2, value: 20)
+        let b = a
+        let removed = a.removeValue(forKey: 1)
+        #expect(removed == 10)
+        let bStillHas = b.contains(key: 1)
+        #expect(bStillHas)
+        #expect(b.index(forKey: 2) == rank(1))   // the sibling's order is untouched
+        #expect(a.index(forKey: 2) == rank(0))
+
+        var c = a.clone()
+        c.insert(key: 9, value: 90)
+        let aHas9 = a.contains(key: 9), cHas9 = c.contains(key: 9)
+        #expect(!aHas9)
+        #expect(cHas9)
+    }
+
+    @Test
+    func `removeAll detaches to a fresh box; the sibling is untouched`() {
+        var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        a.insert(key: 1, value: 10)
+        let b = a
+        a.removeAll()
+        let aEmpty = a.isEmpty, bHas = b.contains(key: 1)
+        #expect(aEmpty)
+        #expect(bHas)
+    }
+}
+
+// MARK: - Move-only values + teardown
+
+@Suite(.serialized)
+struct OrderedTeardownTests {
+
+    @Test
+    func `move-only values flow through and tear down exactly once`() {
+        OrderedProbe.reset()
         do {
-            _ = try Dictionary<String, Int>.Ordered([
-                ("a", 1),
-                ("b", 2),
-                ("c", 3),
-                ("a", 10),  // Duplicate
-            ])
-            Issue.record("Expected error to be thrown")
-        } catch let error as Dictionary<String, Int>.Ordered.Error {
-            if case .duplicate(let info) = error {
-                #expect(info.key == "a")
-                let first: Index<String> = info.first
-                #expect(first == 0)  // First occurrence at index 0
+            var d = MoveOrdered<Int, OrderedItem>(minimumCapacity: 4)
+            d.insert(key: 1, value: OrderedItem(10))
+            d.insert(key: 2, value: OrderedItem(20))
+            if let displaced: OrderedItem = d.insert(key: 1, value: OrderedItem(11)) {
+                let id = displaced.id
+                #expect(id == 10)                // the displaced OLD value hands back
             } else {
-                Issue.record("Expected duplicate error")
+                Issue.record("expected the displaced value")
             }
-        } catch {
-            Issue.record("Unexpected error type: \(error)")
+            let peeked = d.withValue(at: Index(Ordinal(0))) { (item: borrowing OrderedItem) in item.id }
+            #expect(peeked == 11)                // positional borrow is not a teardown
+            if let removed: OrderedItem = d.removeValue(forKey: 2) {
+                let id = removed.id
+                #expect(id == 20)
+            } else {
+                Issue.record("expected the removed value")
+            }
         }
+        let all = OrderedProbe.destroyedSorted
+        #expect(all == [10, 11, 20])             // displaced + live-at-teardown + removed
     }
 
     @Test
-    func `Empty dictionary operations`() {
-        var empty = Dictionary<String, Int>.Ordered()
-
-        // Operations on empty dictionary
-        #expect(empty.isEmpty)
-        #expect(empty.count == 0)
-        #expect(empty["missing"] == nil)
-        #expect(!empty.contains("missing"))
-        #expect(empty.keys.index("missing") == nil)
-        #expect(empty.values.remove("missing") == nil)
-
-        // Merge into empty
-        empty.merge.keep.first([("a", 1)])
-        #expect(empty.count == 1)
-        #expect(empty["a"] == 1)
-    }
-
-    @Test
-    func `Empty merge into non-empty`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        let originalKeys = toArray(dict.keys)
-
-        // Merge empty into non-empty
-        let empty: [(String, Int)] = []
-        dict.merge.keep.first(empty)
-
-        #expect(toArray(dict.keys) == originalKeys)
-        #expect(dict.count == 2)
-    }
-
-    @Test
-    func `Nil assignment removes key`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        dict["b"] = nil
-
-        #expect(dict["b"] == nil)
-        #expect(!dict.contains("b"))
-        #expect(dict.count == 2)
-    }
-
-    @Test
-    func `Reinsertion after removal goes to end`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        dict.values.remove("b")
-        dict["b"] = 20
-
-        let keys = toArray(dict.keys)
-        #expect(keys == ["a", "c", "b"])
-    }
-
-    @Test
-    func `Removal shifts indices correctly`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        dict.values.remove("b")
-
-        // Keys.index should be updated
-        let indexC: Index<String>? = dict.keys.index("c")
-        let indexA: Index<String>? = dict.keys.index("a")
-        #expect(indexC == 1)
-        #expect(indexA == 0)
-    }
-
-    @Test
-    func `Single element dictionary`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["only"] = 42
-
-        #expect(dict.count == 1)
-        #expect(!dict.isEmpty)
-        #expect(dict["only"] == 42)
-        let indexOnly: Index<String>? = dict.keys.index("only")
-        #expect(indexOnly == 0)
-
-        dict.values.remove("only")
-        #expect(dict.isEmpty)
+    func `the boxed move-only lane tears down via the box drain`() {
+        OrderedProbe2.reset()
+        do {
+            var d = Dictionary<Shared<Hash.Entry<Int, OrderedItem2>, EntryColumn<Int, OrderedItem2>>>.Ordered(minimumCapacity: 4)
+            d.insert(key: 7, value: OrderedItem2(70))
+            d.insert(key: 8, value: OrderedItem2(80))
+            let n = d.count
+            #expect(n == Index<Hash.Entry<Int, OrderedItem2>>.Count(2))
+        }
+        let all = OrderedProbe2.destroyedSorted
+        #expect(all == [70, 80])
     }
 }
 
-// MARK: - Integration Tests
+private struct OrderedItem: ~Copyable {
+    let id: Int
+    init(_ id: Int) { self.id = id }
+    deinit { OrderedProbe.recordDestroy(id) }
+}
 
-extension DictionaryOrderedTests.Integration {
+private enum OrderedProbe {
+    nonisolated(unsafe) static var _destroyed: [Int] = []
+    static func reset() { unsafe _destroyed = [] }
+    static func recordDestroy(_ id: Int) { unsafe _destroyed.append(id) }
+    static var destroyedSorted: [Int] { unsafe _destroyed.sorted() }
+}
 
-    @Test
-    func `CoW: mutation does not affect original`() {
-        var original = Dictionary<String, Int>.Ordered()
-        original["a"] = 1
-        original["b"] = 2
-        original["c"] = 3
+private struct OrderedItem2: ~Copyable {
+    let id: Int
+    init(_ id: Int) { self.id = id }
+    deinit { OrderedProbe2.recordDestroy(id) }
+}
 
-        var copy = original
-        copy["d"] = 4
-        copy["a"] = nil
+private enum OrderedProbe2 {
+    nonisolated(unsafe) static var _destroyed: [Int] = []
+    static func reset() { unsafe _destroyed = [] }
+    static func recordDestroy(_ id: Int) { unsafe _destroyed.append(id) }
+    static var destroyedSorted: [Int] { unsafe _destroyed.sorted() }
+}
 
-        #expect(toArray(original.keys) == ["a", "b", "c"])
-        #expect(toArray(copy.keys) == ["b", "c", "d"])
-        #expect(original.count == 3)
-        #expect(copy.count == 3)
-    }
+// MARK: - Sendable smoke
 
-    @Test
-    func `CoW: multiple copies are independent`() {
-        var original = Dictionary<String, Int>.Ordered()
-        original["a"] = 1
-        original["b"] = 2
-
-        var copy1 = original
-        var copy2 = original
-
-        copy1["c"] = 3
-        copy2["a"] = nil
-
-        #expect(toArray(original.keys) == ["a", "b"])
-        #expect(toArray(copy1.keys) == ["a", "b", "c"])
-        #expect(toArray(copy2.keys) == ["b"])
-    }
+@Suite
+struct OrderedSendableTests {
 
     @Test
-    func `Key-value index correspondence after operations`() {
-        var dict = Dictionary<String, Int>.Ordered()
-
-        // Build dictionary
-        for i in 0..<10 {
-            dict["key\(i)"] = i * 10
-        }
-
-        // Verify correspondence
-        let count1 = Int(bitPattern: dict.count)
-        for i in 0..<count1 {
-            let key = dict.keys[raw: i]
-            let pair = dict[index: i]
-            #expect(pair.key == key)
-            #expect(dict[key] == pair.value)
-        }
-
-        // Remove some elements
-        dict.values.remove("key3")
-        dict.values.remove("key7")
-
-        // Verify correspondence still holds
-        let count2 = Int(bitPattern: dict.count)
-        for i in 0..<count2 {
-            let key = dict.keys[raw: i]
-            let pair = dict[index: i]
-            #expect(pair.key == key)
-            #expect(dict[key] == pair.value)
-        }
-    }
-
-    @Test
-    func `Order preserved through many operations`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        var expectedOrder: [String] = []
-
-        // Insert 50 elements
-        for i in 0..<50 {
-            let key = "key\(i)"
-            dict[key] = i
-            expectedOrder.append(key)
-        }
-
-        // Update values (should not change order)
-        for i in stride(from: 0, to: 50, by: 2) {
-            dict["key\(i)"] = i * 100
-        }
-
-        #expect(toArray(dict.keys) == expectedOrder)
-
-        // Remove every 5th element
-        for i in stride(from: 0, to: 50, by: 5) {
-            dict.values.remove("key\(i)")
-            expectedOrder.removeAll { $0 == "key\(i)" }
-        }
-
-        #expect(toArray(dict.keys) == expectedOrder)
-
-        // Re-insert removed elements (should go to end)
-        for i in stride(from: 0, to: 50, by: 5) {
-            dict["key\(i)"] = i * 1000
-            expectedOrder.append("key\(i)")
-        }
-
-        #expect(toArray(dict.keys) == expectedOrder)
-    }
-
-    @Test
-    func `Merge keep first is idempotent`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        let originalKeys = toArray(dict.keys)
-        let originalValues = toArray(dict.values)
-
-        // Merge with self should be idempotent
-        dict.merge.keep.first(toArray(dict).map { ($0.key, $0.value) })
-
-        #expect(toArray(dict.keys) == originalKeys)
-        #expect(toArray(dict.values) == originalValues)
-    }
-
-    @Test
-    func `Merge keep last is idempotent`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        let originalKeys = toArray(dict.keys)
-        let originalValues = toArray(dict.values)
-
-        // Merge with self should be idempotent
-        dict.merge.keep.last(toArray(dict).map { ($0.key, $0.value) })
-
-        #expect(toArray(dict.keys) == originalKeys)
-        #expect(toArray(dict.values) == originalValues)
-    }
-
-    @Test
-    func `Merge keep first with empty is identity`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        let originalKeys = toArray(dict.keys)
-        let originalValues = toArray(dict.values)
-
-        // Merge with empty should be identity
-        dict.merge.keep.first([])
-
-        #expect(toArray(dict.keys) == originalKeys)
-        #expect(toArray(dict.values) == originalValues)
-    }
-
-    @Test
-    func `Merge keep last with empty is identity`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-
-        let originalKeys = toArray(dict.keys)
-        let originalValues = toArray(dict.values)
-
-        // Merge with empty should be identity
-        dict.merge.keep.last([])
-
-        #expect(toArray(dict.keys) == originalKeys)
-        #expect(toArray(dict.values) == originalValues)
-    }
-
-    @Test
-    func `Merge with reversed order`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        // Merge reversed pairs
-        dict.merge.keep.last([("c", 30), ("b", 20), ("a", 10)])
-
-        // Order should be preserved, values updated
-        #expect(toArray(dict.keys) == ["a", "b", "c"])
-        #expect(dict["a"] == 10)
-        #expect(dict["b"] == 20)
-        #expect(dict["c"] == 30)
-    }
-
-    @Test
-    func `Merge with interleaved keys`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["c"] = 3
-        dict["e"] = 5
-
-        // Merge interleaved keys
-        dict.merge.keep.first([("b", 2), ("d", 4), ("f", 6)])
-
-        // Original keys first, then new keys in merge order
-        #expect(toArray(dict.keys) == ["a", "c", "e", "b", "d", "f"])
-    }
-
-    @Test
-    func `Reverse iteration`() {
-        var dict = Dictionary<String, Int>.Ordered()
-        dict["a"] = 1
-        dict["b"] = 2
-        dict["c"] = 3
-
-        // `Dictionary.Ordered` no longer conforms `Swift.BidirectionalCollection`
-        // (dropped with the stdlib-bridge migration); reverse a materialised snapshot.
-        let reversed = toArray(dict).reversed()
-        #expect(reversed.map { $0.key } == ["c", "b", "a"])
+    func `sendable composes through both columns`() {
+        let a = MoveOrdered<Int, Int>(minimumCapacity: 1)
+        requireSendable(a)
+        let b = CoWOrdered<Int, Int>(minimumCapacity: 1)
+        requireSendable(b)
+        #expect(Bool(true))
     }
 }
+
+private func requireSendable<T: Sendable & ~Copyable>(_ value: borrowing T) {}
