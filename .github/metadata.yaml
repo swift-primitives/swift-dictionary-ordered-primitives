@@ -1,5 +1,5 @@
 # .github/metadata.yaml
-description: "Ordered-dictionary types for Swift."
+description: "Dictionary.Ordered — an insertion-ordered hash dictionary generic over its storage column; preserves insertion order with O(1) average-case lookup."
 topics:
   - primitives
   - dictionary
