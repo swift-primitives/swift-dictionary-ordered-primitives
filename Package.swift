@@ -31,7 +31,6 @@ let package = Package(
         .package(url: "https://github.com/swift-primitives/swift-shared-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-column-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-index-primitives.git", branch: "main"),
-        .package(url: "https://github.com/swift-primitives/swift-store-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-buffer-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-buffer-linear-primitives.git", branch: "main"),
         .package(url: "https://github.com/swift-primitives/swift-storage-primitives.git", branch: "main"),
@@ -85,7 +84,7 @@ let package = Package(
                 .product(name: "Memory Heap Primitives", package: "swift-memory-heap-primitives"),
                 .product(name: "Memory Allocator Primitive", package: "swift-memory-allocation-primitives"),
                 .product(name: "Index Primitives", package: "swift-index-primitives"),
-                .product(name: "Store Protocol Primitives", package: "swift-store-primitives"),
+                .product(name: "Store Protocol Primitives", package: "swift-storage-primitives"),
                 .product(name: "Buffer Protocol Primitives", package: "swift-buffer-primitives"),
                 .product(name: "Ordinal Primitives Standard Library Integration", package: "swift-ordinal-primitives"),
             ]
