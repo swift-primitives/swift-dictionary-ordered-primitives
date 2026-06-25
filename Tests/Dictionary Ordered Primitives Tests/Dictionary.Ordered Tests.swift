@@ -321,6 +321,25 @@ struct OrderedCoWTests {
         #expect(aEmpty)
         #expect(bHas)
     }
+
+    @Test
+    func `set and the keyed subscript read, replace, and remove; the subscript setter detaches`() {
+        var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
+        a.set(1, 10)                                 // set inserts a fresh key
+        a.set(2, 20)
+        a[1] = 11                                    // subscript setter replaces in place
+        let read1 = a[1], readMissing = a[9]         // subscript getter
+        #expect(read1 == 11)
+        #expect(readMissing == nil)
+        #expect(a.index(forKey: 1) == rank(0))       // replacement kept the rank
+
+        let b = a                                    // S5: Ordered is Copyable because S is
+        a[1] = nil                                   // assigning nil removes; detaches the box
+        let goneFromA = a[1], keptInB = b[1]
+        #expect(goneFromA == nil)
+        #expect(keptInB == 11)                       // the sibling keeps its entry
+        #expect(a.count == Index<Hash.Entry<Int, Int>>.Count(1))
+    }
 }
 
 // MARK: - Move-only values + teardown

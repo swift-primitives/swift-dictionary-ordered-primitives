@@ -303,3 +303,45 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
         Self(store: store.clone())
     }
 }
+
+// ============================================================================
+// MARK: - Copyable keyed conveniences (the value-returning ergonomic surface;
+// `Shared` CoW column, `Copyable` value — the keyed subscript hands the value
+// back BY VALUE, so it gates `V: Copyable` per [API-IMPL-021]; the move-only
+// columns keep the scoped `withValue` / `insert` doors above)
+// ============================================================================
+
+extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+    /// Accesses the value stored for `key` (`Shared` CoW column; `Copyable` value).
+    ///
+    /// A `nil` read means the key is absent; assigning `nil` removes the entry.
+    /// Assigning a value sets it — replacement keeps the existing key's position,
+    /// a fresh key appends at the end of the insertion order (see
+    /// `insert(key:value:)`).
+    ///
+    /// - Complexity: O(1) average; the setter is O(`capacity`) when a copy must
+    ///   be made first (CoW uniqueness).
+    @inlinable
+    public subscript<K: Hash.Key, V>(key: K) -> V?
+    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        get { withValue(forKey: key) { $0 } }
+        set {
+            if let newValue {
+                insert(key: key, value: newValue)
+            } else {
+                _ = removeValue(forKey: key)
+            }
+        }
+    }
+
+    /// Sets `value` for `key` (`Shared` CoW column; `Copyable` value) — the
+    /// labeled-mutator sibling of the keyed subscript. Discards the displaced
+    /// value; reach for `insert(key:value:)` when the old value is needed.
+    ///
+    /// - Complexity: O(1) amortized (O(`capacity`) when a copy must be made first).
+    @inlinable
+    public mutating func set<K: Hash.Key, V>(_ key: K, _ value: V)
+    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        insert(key: key, value: value)
+    }
+}
