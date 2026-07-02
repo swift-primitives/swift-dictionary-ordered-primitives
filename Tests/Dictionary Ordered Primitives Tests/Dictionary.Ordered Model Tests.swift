@@ -34,8 +34,8 @@ import Testing
 private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
-private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<EntryColumn<K, V>>.Ordered
-private typealias CoWOrdered<K: Hash.Key, V> = Dictionary<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>.Ordered
+private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<K, V>.Ordered
+private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
 
 // MARK: - Fixtures
 

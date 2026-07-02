@@ -36,7 +36,7 @@ import Ordinal_Primitives_Standard_Library_Integration
 // MARK: - Key → position (the engine's projected-key probe)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// The position of the entry for the key, or `nil` if the key is absent
     /// (direct column).
     ///
@@ -72,7 +72,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // MARK: - Positional reads
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// The key at the position (direct column).
     ///
     /// - Precondition: `position < count`.
@@ -177,7 +177,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // cheap no-change branch)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Calls the closure with mutable access to the value at the position;
     /// returns its result (direct column).
     ///

@@ -14,12 +14,12 @@
 // (`Dictionary.Ordered+Columns.swift` / `Dictionary.Ordered+Positions.swift`) —
 // they reach the engine, which only the concrete composite exposes.
 public import Dictionary_Ordered_Primitive
-public import Dictionary_Primitive
 public import Buffer_Protocol_Primitives
 public import Store_Protocol_Primitives
 public import Index_Primitives
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol`,
+    S.Count == Index_Primitives.Index<S.Element>.Count {
     /// The number of key–value entries.
     @inlinable
     public var count: Index_Primitives.Index<S.Element>.Count { store.count }
@@ -35,7 +35,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 
 // MARK: - Cloning (generic on the CoW column)
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: Copyable {
+extension __DictionaryOrdered where S: Copyable, S: Store.`Protocol` {
     /// Returns an independent copy of this ordered dictionary with its own storage
     /// (the mutation gate on the fresh copy ALWAYS installs a deep copy).
     ///

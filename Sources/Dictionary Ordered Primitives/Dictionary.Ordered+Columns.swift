@@ -33,7 +33,7 @@ public import Index_Primitives
 // MARK: - Insert (displaced-value hand-back — move-only honesty)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Sets the value for a key; returns the DISPLACED old value if the key was
     /// present, or `nil` on a fresh insertion. On replacement the stored entry keeps
     /// its ORIGINAL key instance — and its POSITION (direct column); a fresh key
@@ -87,7 +87,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // MARK: - Lookup
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Whether a value exists for the key (direct column).
     ///
     /// - Complexity: O(1) average
@@ -157,7 +157,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // indexed seam's re-index guard takes its cheap no-change branch)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Calls the closure with mutable access to the value for the key; returns its
     /// result, or `nil` if the key is absent (direct column).
     ///
@@ -199,7 +199,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // MARK: - Remove (insertion order preserved)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Removes the entry for the key; returns its value, or `nil` if absent
     /// (direct column). Positions after the removal point shift down by one.
     ///
@@ -273,7 +273,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // MARK: - Iteration (insertion order) + direct clone
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Calls the closure for each key–value pair, in insertion order (direct column).
     ///
     /// - Complexity: O(n)
@@ -311,7 +311,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
 // columns keep the scoped `withValue` / `insert` doors above)
 // ============================================================================
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: ~Copyable {
     /// Accesses the value stored for `key` (`Shared` CoW column; `Copyable` value).
     ///
     /// A `nil` read means the key is absent; assigning `nil` removes the entry.

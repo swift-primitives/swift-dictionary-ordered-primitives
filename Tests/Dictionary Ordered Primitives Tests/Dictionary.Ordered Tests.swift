@@ -30,8 +30,8 @@ import Testing
 private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
-private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<EntryColumn<K, V>>.Ordered
-private typealias CoWOrdered<K: Hash.Key, V> = Dictionary<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>.Ordered
+private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<K, V>.Ordered
+private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
 
 /// The position at insertion-order rank `n` (runtime construction; the ordered
 /// index domain is entry-tagged).
@@ -174,7 +174,7 @@ struct OrderedPositionTests {
         #expect(d.index(forKey: 20) == rank(1))
         #expect(d.index(forKey: 30) == rank(2))
         #expect(d.index(forKey: 40) == nil)
-        let zero: Dictionary<EntryColumn<Int, Int>>.Ordered.Index = .zero
+        let zero: Dictionary<Int, Int>.Ordered.Index = .zero
         #expect(d.index(forKey: 10) == zero)     // the ordered index domain typealias
     }
 
@@ -377,7 +377,7 @@ struct OrderedTeardownTests {
     func `the boxed move-only lane tears down via the box drain`() {
         OrderedProbe2.reset()
         do {
-            var d = Dictionary<Shared<Hash.Entry<Int, OrderedItem2>, EntryColumn<Int, OrderedItem2>>>.Ordered(minimumCapacity: 4)
+            var d = __DictionaryOrdered<Shared<Hash.Entry<Int, OrderedItem2>, EntryColumn<Int, OrderedItem2>>>(minimumCapacity: 4)
             d.insert(key: 7, value: OrderedItem2(70))
             d.insert(key: 8, value: OrderedItem2(80))
             let n = d.count

@@ -9,10 +9,10 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Dictionary_Primitive
+public import Store_Protocol_Primitives
 public import Index_Primitives
 
-extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
+extension __DictionaryOrdered where S: Store.`Protocol` & ~Copyable {
     /// The ORDERED INDEX DOMAIN — type-safe positions into the entry column.
     ///
     /// Uses `Index<S.Element>` (entry-tagged) to provide compile-time safety
@@ -20,7 +20,7 @@ extension Dictionary_Primitive.Dictionary.Ordered where S: ~Copyable {
     ///
     /// ## Ordering contract
     ///
-    /// The base `Dictionary<S>` makes no positional promise — its contract is
+    /// The base `__Dictionary` makes no positional promise — its contract is
     /// keyed. `Ordered` CONTRACTS positions as insertion-order ranks:
     /// position `0` is the oldest live entry and `count − 1` the newest.
     /// Updating an existing key keeps its position; removing an entry shifts

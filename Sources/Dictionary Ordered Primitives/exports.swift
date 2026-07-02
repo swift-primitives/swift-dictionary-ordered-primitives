@@ -15,9 +15,10 @@
 // NB: the pre-reshape composition (`Set.Ordered` keys + a parallel value plane,
 // with Bounded/Inline/Small capacity variants, Builder, Merge, Keys/Values
 // views, and Iterator/Iterable/Sequenceable conformances) is RETIRED (W5
-// ordered round, 2026-06-11) — replaced by the column-generic
-// `Dictionary<S>.Ordered` over `Hash.Indexed` with key-projected `Hash.Entry`
-// elements. The namespace and column packages are ordinary dependencies, never
-// re-exported (zero cross-package re-exports).
+// ordered round, 2026-06-11) — replaced by the column-generic carrier
+// `__DictionaryOrdered<S>` (nest alias `Dictionary<K, V>.Ordered`) over
+// `Hash.Indexed` with key-projected `Hash.Entry` elements. The namespace and column
+// packages are ordinary dependencies, never re-exported (zero cross-package
+// re-exports).
 
 @_exported public import Dictionary_Ordered_Primitive
