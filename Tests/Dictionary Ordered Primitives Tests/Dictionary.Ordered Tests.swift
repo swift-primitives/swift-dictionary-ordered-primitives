@@ -16,7 +16,7 @@ import Buffer_Primitives_Test_Support
 import Hash_Indexed_Primitive
 import Hash_Primitives
 import Hash_Primitives_Standard_Library_Integration
-import Shared_Primitive
+import Ownership_Shared_Primitive
 import Column_Primitives
 import Index_Primitives
 import Tagged_Primitives_Standard_Library_Integration
@@ -31,7 +31,7 @@ private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
 private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<K, V>.Ordered
-private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
+private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
 
 /// The position at insertion-order rank `n` (runtime construction; the ordered
 /// index domain is entry-tagged).
@@ -47,7 +47,7 @@ struct OrderedColumnLawTests {
     @Test
     func `the shared entry column obeys the seam ledger laws`() {
         let violations = Seam.Ledger.violations(
-            makeEmpty: { Shared(EntryColumn<Int, Int>(minimumCapacity: Index<Hash.Entry<Int, Int>>.Count(4))) },
+            makeEmpty: { Ownership.Shared(EntryColumn<Int, Int>(minimumCapacity: Index<Hash.Entry<Int, Int>>.Count(4))) },
             element: { Hash.Entry(key: $0, value: $0) }
         )
         #expect(violations.isEmpty, "\(violations)")
@@ -377,7 +377,7 @@ struct OrderedTeardownTests {
     func `the boxed move-only lane tears down via the box drain`() {
         OrderedProbe2.reset()
         do {
-            var d = __DictionaryOrdered<Shared<Hash.Entry<Int, OrderedItem2>, EntryColumn<Int, OrderedItem2>>>(minimumCapacity: 4)
+            var d = __DictionaryOrdered<Ownership.Shared<Hash.Entry<Int, OrderedItem2>, EntryColumn<Int, OrderedItem2>>>(minimumCapacity: 4)
             d.insert(key: 7, value: OrderedItem2(70))
             d.insert(key: 8, value: OrderedItem2(80))
             let n = d.count

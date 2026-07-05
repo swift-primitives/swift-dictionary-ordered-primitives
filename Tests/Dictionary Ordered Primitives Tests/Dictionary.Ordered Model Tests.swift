@@ -14,7 +14,7 @@ import Dictionary_Primitive
 import Hash_Table_Primitives_Test_Support
 import Buffer_Primitives_Test_Support
 import Hash_Primitives
-import Shared_Primitive
+import Ownership_Shared_Primitive
 import Column_Primitives
 import Index_Primitives
 import Tagged_Primitives_Standard_Library_Integration
@@ -35,7 +35,7 @@ private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
 private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<K, V>.Ordered
-private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
+private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
 
 // MARK: - Fixtures
 

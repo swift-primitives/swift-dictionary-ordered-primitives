@@ -19,7 +19,7 @@ public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Column_Primitives
 public import Buffer_Primitive
 public import Buffer_Linear_Primitive
@@ -63,7 +63,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     @inlinable
     @discardableResult
     public mutating func insert<K: Hash.Key & ~Copyable, V: ~Copyable>(key: consuming K, value: consuming V) -> V?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique(consuming: Hash.Entry(key: key, value: value)) { column, entry in
             if let slot = column.position(
                 matching: entry.hashValue,
@@ -106,7 +106,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) average
     @inlinable
     public func contains<K: Hash.Key & ~Copyable, V: ~Copyable>(key: borrowing K) -> Bool
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             column.position(
                 matching: key.hashValue,
@@ -138,7 +138,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) average, plus the closure
     @inlinable
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (borrowing V) -> R) -> R?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column -> R? in
             guard let slot = column.position(
                 matching: key.hashValue,
@@ -181,7 +181,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) average (O(`capacity`) when a copy must be made first), plus the closure
     @inlinable
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (inout V) -> R) -> R?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique { column -> R? in
             guard let slot = column.position(
                 matching: key.hashValue,
@@ -220,7 +220,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// Removes the entry for the key (`Shared` column; uniqueness restored first).
     @inlinable
     public mutating func removeValue<K: Hash.Key & ~Copyable, V: ~Copyable>(forKey key: borrowing K) -> V?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique { column -> V? in
             guard let entry = column.remove(
                 matching: key.hashValue,
@@ -242,14 +242,14 @@ extension __DictionaryOrdered where S: ~Copyable {
 
     /// Removes all entries (`Shared` column; detaches to a fresh box — siblings keep
     /// theirs). The Copyable half of the [MEM-COPY-017] pair: with a Copyable entry,
-    /// `Shared(_:)` resolves to the strategy-CARRYING init, so the replacement box
+    /// `Ownership.Shared(_:)` resolves to the strategy-CARRYING init, so the replacement box
     /// stays forkable (ASK-W3-A: a single `~Copyable`-bounded overload selected the
     /// strategy-less init, and removeAll → copy → mutate trapped the uniqueness gate).
     @inlinable
     public mutating func removeAll<K: Hash.Key, V>(keepingCapacity: Bool = true)
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         let capacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = keepingCapacity ? store.capacity : .zero
-        self.store = Shared(
+        self.store = Ownership.Shared(
             Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: capacity)
         )
     }
@@ -261,9 +261,9 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// unreachable.
     @inlinable
     public mutating func removeAll<K: Hash.Key & ~Copyable, V: ~Copyable>(keepingCapacity: Bool = true)
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         let capacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = keepingCapacity ? store.capacity : .zero
-        self.store = Shared(
+        self.store = Ownership.Shared(
             Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: capacity)
         )
     }
@@ -288,7 +288,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(n)
     @inlinable
     public func forEach<K: Hash.Key & ~Copyable, V: ~Copyable>(_ body: (borrowing K, borrowing V) -> Void)
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             column.forEach { entry in body(entry.key, entry.value) }
         }
@@ -323,7 +323,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     ///   be made first (CoW uniqueness).
     @inlinable
     public subscript<K: Hash.Key, V>(key: K) -> V?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         get { withValue(forKey: key) { $0 } }
         set {
             if let newValue {
@@ -341,7 +341,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) amortized (O(`capacity`) when a copy must be made first).
     @inlinable
     public mutating func set<K: Hash.Key, V>(_ key: K, _ value: V)
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         insert(key: key, value: value)
     }
 }

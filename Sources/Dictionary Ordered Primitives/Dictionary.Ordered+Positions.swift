@@ -21,7 +21,7 @@ public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Column_Primitives
 public import Buffer_Primitive
 public import Buffer_Linear_Primitive
@@ -57,7 +57,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) average
     @inlinable
     public func index<K: Hash.Key & ~Copyable, V: ~Copyable>(forKey key: borrowing K) -> Index_Primitives.Index<Hash.Entry<K, V>>?
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             column.position(
                 matching: key.hashValue,
@@ -90,7 +90,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public func key<K: Hash.Key, V: ~Copyable>(at position: Index_Primitives.Index<Hash.Entry<K, V>>) -> K
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             precondition(position < column.count.map(Ordinal.init), "ordered index domain: position out of bounds")
             return column[position].key
@@ -114,7 +114,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public func value<K: Hash.Key & ~Copyable, V>(at position: Index_Primitives.Index<Hash.Entry<K, V>>) -> V
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             precondition(position < column.count.map(Ordinal.init), "ordered index domain: position out of bounds")
             return column[position].value
@@ -138,7 +138,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1)
     @inlinable
     public func entry<K: Hash.Key, V>(at position: Index_Primitives.Index<Hash.Entry<K, V>>) -> (key: K, value: V)
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             precondition(position < column.count.map(Ordinal.init), "ordered index domain: position out of bounds")
             return (key: column[position].key, value: column[position].value)
@@ -163,7 +163,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1), plus the closure
     @inlinable
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(at position: Index_Primitives.Index<Hash.Entry<K, V>>, _ body: (borrowing V) -> R) -> R
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column in
             precondition(position < column.count.map(Ordinal.init), "ordered index domain: position out of bounds")
             return body(column[position].value)
@@ -197,7 +197,7 @@ extension __DictionaryOrdered where S: ~Copyable {
     /// - Complexity: O(1) (O(`capacity`) when a copy must be made first), plus the closure
     @inlinable
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(at position: Index_Primitives.Index<Hash.Entry<K, V>>, _ body: (inout V) -> R) -> R
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique { column in
             precondition(position < column.count.map(Ordinal.init), "ordered index domain: position out of bounds")
             return body(&column[position].value)

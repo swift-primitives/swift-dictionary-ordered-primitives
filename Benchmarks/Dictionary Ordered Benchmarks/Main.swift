@@ -19,7 +19,7 @@ enum Main {
         print("=== swift-dictionary-ordered-primitives — family-tier benchmark (W2) ===")
         print("config: sizes=\(Bench.sizes) curveSizes=\(Bench.curveSizes) samples=\(Bench.samples) warmup=\(Bench.warmup)")
         print("targets/sample: element=\(Bench.elementOpsTarget) structure=\(Bench.structureOpsTarget) copiedSlots=\(Bench.copiedSlotsTarget)")
-        print("subjects: tower.direct=Dictionary<Hash.Indexed<Column.Heap<Entry>>>.Ordered · tower.cow=Dictionary<Shared<Entry,…>>.Ordered · stdlib=Swift.Dictionary (UNORDERED baseline)")
+        print("subjects: tower.direct=Dictionary<Hash.Indexed<Column.Heap<Entry>>>.Ordered · tower.cow=Dictionary<Ownership.Shared<Entry,…>>.Ordered · stdlib=Swift.Dictionary (UNORDERED baseline)")
         print("evict shapes: one op = one remove+insert pair at steady occupancy n; frontEvict removes the OLDEST (the order-preserving shift), backEvict the NEWEST (shift-free control)")
         print("")
         Bench.globalWarmup()

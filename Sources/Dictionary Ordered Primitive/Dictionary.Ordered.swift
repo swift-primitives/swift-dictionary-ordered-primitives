@@ -12,7 +12,7 @@
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Shared_Primitive
+public import Ownership_Shared_Primitive
 public import Column_Primitives
 public import Buffer_Primitive
 public import Buffer_Linear_Primitive
@@ -47,7 +47,7 @@ public import Index_Primitives
 ///
 /// ```swift
 /// __DictionaryOrdered<                       Hash.Indexed<Column.Heap<Hash.Entry<Key, FD >>>>   // zero-cost MOVE-ONLY (default)
-/// __DictionaryOrdered<Shared<Hash.Entry<…>,  Hash.Indexed<Column.Heap<Hash.Entry<Key, Int>>>>>  // explicit CoW value semantics
+/// __DictionaryOrdered<Ownership.Shared<Hash.Entry<…>,  Hash.Indexed<Column.Heap<Hash.Entry<Key, Int>>>>>  // explicit CoW value semantics
 /// ```
 ///
 /// The column is `Hash.Indexed<Dense>` with `Dense.Element == Hash.Entry<Key,
@@ -97,7 +97,7 @@ public struct __DictionaryOrdered<S: ~Copyable>: ~Copyable {
 
 // MARK: - Conditional Conformances (co-located per [COPY-FIX-004])
 
-/// The S5 chain: `__DictionaryOrdered<Shared<Hash.Entry<K, V>, B>>` is `Copyable`
+/// The S5 chain: `__DictionaryOrdered<Ownership.Shared<Hash.Entry<K, V>, B>>` is `Copyable`
 /// exactly when the entry is.
 extension __DictionaryOrdered: Copyable where S: Copyable {}
 
@@ -121,8 +121,8 @@ extension __DictionaryOrdered where S: ~Copyable {
     public init<K: Hash.Key, V>(
         minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
     )
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
-        self.init(store: Shared(
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        self.init(store: Ownership.Shared(
             Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
         ))
     }
@@ -133,8 +133,8 @@ extension __DictionaryOrdered where S: ~Copyable {
     public init<K: Hash.Key & ~Copyable, V: ~Copyable>(
         minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
     )
-    where S == Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
-        self.init(store: Shared(
+    where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
+        self.init(store: Ownership.Shared(
             Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
         ))
     }
