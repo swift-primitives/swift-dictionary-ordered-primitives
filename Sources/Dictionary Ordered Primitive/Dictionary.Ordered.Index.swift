@@ -9,8 +9,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-public import Store_Protocol_Primitives
 public import Index_Primitives
+public import Store_Protocol_Primitives
 
 extension __DictionaryOrdered where S: Store.`Protocol` & ~Copyable {
     /// The ORDERED INDEX DOMAIN — type-safe positions into the entry column.

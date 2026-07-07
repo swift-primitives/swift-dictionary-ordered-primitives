@@ -15,19 +15,19 @@
 // accessors ([MEM-OWN-017]: inserted entries thread as consuming closure
 // PARAMETERS). Lookups go through the engine's projected-key doors — the key
 // probes the index planes directly; no entry is constructed to search.
+public import Buffer_Linear_Primitive
+public import Buffer_Primitive
+public import Column_Primitives
 public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Ownership_Shared_Primitive
-public import Column_Primitives
-public import Buffer_Primitive
-public import Buffer_Linear_Primitive
-public import Storage_Primitive
-public import Storage_Contiguous_Primitives
-public import Memory_Heap_Primitives
-public import Memory_Allocator_Primitive
 public import Index_Primitives
+public import Memory_Allocator_Primitive
+public import Memory_Heap_Primitives
+public import Ownership_Shared_Primitive
+public import Storage_Contiguous_Primitives
+public import Storage_Primitive
 
 // ============================================================================
 // MARK: - Insert (displaced-value hand-back — move-only honesty)
@@ -35,9 +35,10 @@ public import Index_Primitives
 
 extension __DictionaryOrdered where S: ~Copyable {
     /// Sets the value for a key; returns the DISPLACED old value if the key was
-    /// present, or `nil` on a fresh insertion. On replacement the stored entry keeps
-    /// its ORIGINAL key instance — and its POSITION (direct column); a fresh key
-    /// appends at the end of the order.
+    /// present, or `nil` on a fresh insertion.
+    ///
+    /// On replacement the stored entry keeps its ORIGINAL key instance — and its
+    /// POSITION (direct column); a fresh key appends at the end of the order.
     ///
     /// - Complexity: O(1) amortized
     @inlinable
@@ -123,11 +124,13 @@ extension __DictionaryOrdered where S: ~Copyable {
     @inlinable
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (borrowing V) -> R) -> R?
     where S == Hash.Indexed<Column.Heap<Hash.Entry<K, V>>> {
-        guard let slot = store.position(
-            matching: key.hashValue,
-            context: key,
-            equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-        ) else {
+        guard
+            let slot = store.position(
+                matching: key.hashValue,
+                context: key,
+                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+            )
+        else {
             return nil
         }
         return body(store[slot].value)
@@ -140,11 +143,13 @@ extension __DictionaryOrdered where S: ~Copyable {
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (borrowing V) -> R) -> R?
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withColumn { column -> R? in
-            guard let slot = column.position(
-                matching: key.hashValue,
-                context: key,
-                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-            ) else {
+            guard
+                let slot = column.position(
+                    matching: key.hashValue,
+                    context: key,
+                    equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+                )
+            else {
                 return nil
             }
             return body(column[slot].value)
@@ -165,11 +170,13 @@ extension __DictionaryOrdered where S: ~Copyable {
     @inlinable
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (inout V) -> R) -> R?
     where S == Hash.Indexed<Column.Heap<Hash.Entry<K, V>>> {
-        guard let slot = store.position(
-            matching: key.hashValue,
-            context: key,
-            equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-        ) else {
+        guard
+            let slot = store.position(
+                matching: key.hashValue,
+                context: key,
+                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+            )
+        else {
             return nil
         }
         return body(&store[slot].value)
@@ -183,11 +190,13 @@ extension __DictionaryOrdered where S: ~Copyable {
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(forKey key: borrowing K, _ body: (inout V) -> R) -> R?
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique { column -> R? in
-            guard let slot = column.position(
-                matching: key.hashValue,
-                context: key,
-                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-            ) else {
+            guard
+                let slot = column.position(
+                    matching: key.hashValue,
+                    context: key,
+                    equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+                )
+            else {
                 return nil
             }
             return body(&column[slot].value)
@@ -201,17 +210,21 @@ extension __DictionaryOrdered where S: ~Copyable {
 
 extension __DictionaryOrdered where S: ~Copyable {
     /// Removes the entry for the key; returns its value, or `nil` if absent
-    /// (direct column). Positions after the removal point shift down by one.
+    /// (direct column).
+    ///
+    /// Positions after the removal point shift down by one.
     ///
     /// - Complexity: O(n) from the removal point (order preservation)
     @inlinable
     public mutating func removeValue<K: Hash.Key & ~Copyable, V: ~Copyable>(forKey key: borrowing K) -> V?
     where S == Hash.Indexed<Column.Heap<Hash.Entry<K, V>>> {
-        guard let entry = store.remove(
-            matching: key.hashValue,
-            context: key,
-            equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-        ) else {
+        guard
+            let entry = store.remove(
+                matching: key.hashValue,
+                context: key,
+                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+            )
+        else {
             return nil
         }
         return entry.take()
@@ -222,11 +235,13 @@ extension __DictionaryOrdered where S: ~Copyable {
     public mutating func removeValue<K: Hash.Key & ~Copyable, V: ~Copyable>(forKey key: borrowing K) -> V?
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
         store.withUnique { column -> V? in
-            guard let entry = column.remove(
-                matching: key.hashValue,
-                context: key,
-                equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
-            ) else {
+            guard
+                let entry = column.remove(
+                    matching: key.hashValue,
+                    context: key,
+                    equals: { (candidate: borrowing Hash.Entry<K, V>, probe: borrowing K) in candidate.key == probe }
+                )
+            else {
                 return nil
             }
             return entry.take()
@@ -241,7 +256,9 @@ extension __DictionaryOrdered where S: ~Copyable {
     }
 
     /// Removes all entries (`Shared` column; detaches to a fresh box — siblings keep
-    /// theirs). The Copyable half of the [MEM-COPY-017] pair: with a Copyable entry,
+    /// theirs).
+    ///
+    /// The Copyable half of the [MEM-COPY-017] pair: with a Copyable entry,
     /// `Ownership.Shared(_:)` resolves to the strategy-CARRYING init, so the replacement box
     /// stays forkable (ASK-W3-A: a single `~Copyable`-bounded overload selected the
     /// strategy-less init, and removeAll → copy → mutate trapped the uniqueness gate).
@@ -254,11 +271,12 @@ extension __DictionaryOrdered where S: ~Copyable {
         )
     }
 
-    /// Removes all entries (`Shared` column, move-only elements). The replacement box
-    /// is statically unique and carries NO clone strategy — lawful here: with a
-    /// move-only entry the ordered dictionary itself is move-only (S5: copyability
-    /// flows from the column), so this box can never be forked and a strategy is
-    /// unreachable.
+    /// Removes all entries (`Shared` column, move-only elements).
+    ///
+    /// The replacement box is statically unique and carries NO clone strategy —
+    /// lawful here: with a move-only entry the ordered dictionary itself is
+    /// move-only (S5: copyability flows from the column), so this box can never be
+    /// forked and a strategy is unreachable.
     @inlinable
     public mutating func removeAll<K: Hash.Key & ~Copyable, V: ~Copyable>(keepingCapacity: Bool = true)
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
@@ -270,9 +288,16 @@ extension __DictionaryOrdered where S: ~Copyable {
 }
 
 // ============================================================================
-// MARK: - Iteration (insertion order) + direct clone
+// MARK: - Iteration (insertion order)
 // ============================================================================
 
+// swift-format-ignore
+// AmbiguousTrailingClosureOverload false-positive: the two `forEach` overloads
+// below are distinguished by mutually exclusive `where S == ...` constraints, so
+// exactly one applies for any concrete `S` — the same column-pinned pattern as
+// `insert`/`contains`/`remove`/`removeAll` above (unflagged, since those don't
+// take a closure). Split into its own extension so the ignore doesn't also
+// blanket-cover `clone()` below.
 extension __DictionaryOrdered where S: ~Copyable {
     /// Calls the closure for each key–value pair, in insertion order (direct column).
     ///
@@ -293,7 +318,13 @@ extension __DictionaryOrdered where S: ~Copyable {
             column.forEach { entry in body(entry.key, entry.value) }
         }
     }
+}
 
+// ============================================================================
+// MARK: - Direct clone
+// ============================================================================
+
+extension __DictionaryOrdered where S: ~Copyable {
     /// Returns an independent copy (direct column).
     ///
     /// - Complexity: O(`capacity`)
@@ -335,8 +366,10 @@ extension __DictionaryOrdered where S: ~Copyable {
     }
 
     /// Sets `value` for `key` (`Shared` CoW column; `Copyable` value) — the
-    /// labeled-mutator sibling of the keyed subscript. Discards the displaced
-    /// value; reach for `insert(key:value:)` when the old value is needed.
+    /// labeled-mutator sibling of the keyed subscript.
+    ///
+    /// Discards the displaced value; reach for `insert(key:value:)` when the old
+    /// value is needed.
     ///
     /// - Complexity: O(1) amortized (O(`capacity`) when a copy must be made first).
     @inlinable

@@ -9,18 +9,18 @@
 //
 // ===----------------------------------------------------------------------===//
 
+public import Buffer_Linear_Primitive
+public import Buffer_Primitive
+public import Column_Primitives
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Ownership_Shared_Primitive
-public import Column_Primitives
-public import Buffer_Primitive
-public import Buffer_Linear_Primitive
-public import Storage_Primitive
-public import Storage_Contiguous_Primitives
-public import Memory_Heap_Primitives
-public import Memory_Allocator_Primitive
 public import Index_Primitives
+public import Memory_Allocator_Primitive
+public import Memory_Heap_Primitives
+public import Ownership_Shared_Primitive
+public import Storage_Contiguous_Primitives
+public import Storage_Primitive
 
 // MARK: - __DictionaryOrdered (the ORDER-CONTRACTING deque-sibling carrier over the
 // same ordered hashed entry COLUMN the base `__Dictionary` composes)
@@ -77,8 +77,9 @@ public import Index_Primitives
 public struct __DictionaryOrdered<S: ~Copyable>: ~Copyable {
 
     /// The ordered hashed entry column — move-only (the default ownership column) or
-    /// a `Shared` CoW column. The ADT is a thin keyed-plus-ordered discipline over
-    /// it; it carries NO deinit.
+    /// a `Shared` CoW column.
+    ///
+    /// The ADT is a thin keyed-plus-ordered discipline over it; it carries NO deinit.
     @usableFromInline
     package var store: S
 
@@ -122,9 +123,11 @@ extension __DictionaryOrdered where S: ~Copyable {
         minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
     )
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
-        self.init(store: Ownership.Shared(
-            Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
-        ))
+        self.init(
+            store: Ownership.Shared(
+                Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
+            )
+        )
     }
 
     /// Creates an empty statically-unique ordered dictionary of move-only values
@@ -134,8 +137,10 @@ extension __DictionaryOrdered where S: ~Copyable {
         minimumCapacity: Index_Primitives.Index<Hash.Entry<K, V>>.Count = .zero
     )
     where S == Ownership.Shared<Hash.Entry<K, V>, Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>> {
-        self.init(store: Ownership.Shared(
-            Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
-        ))
+        self.init(
+            store: Ownership.Shared(
+                Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>(minimumCapacity: minimumCapacity)
+            )
+        )
     }
 }

@@ -13,10 +13,10 @@
 // template bound; the keyed and positional ops pin per column
 // (`Dictionary.Ordered+Columns.swift` / `Dictionary.Ordered+Positions.swift`) —
 // they reach the engine, which only the concrete composite exposes.
-public import Dictionary_Ordered_Primitive
 public import Buffer_Protocol_Primitives
-public import Store_Protocol_Primitives
+public import Dictionary_Ordered_Primitive
 public import Index_Primitives
+public import Store_Protocol_Primitives
 
 extension __DictionaryOrdered where S: ~Copyable, S: Store.`Protocol` & Buffer.`Protocol` {
     /// The number of key–value entries.

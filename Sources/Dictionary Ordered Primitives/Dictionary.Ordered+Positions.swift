@@ -17,20 +17,20 @@
 // traps. Positional mutation is VALUE-only (mutability ruling (a)): the key at a
 // position — and therefore its hash and its rank — never changes through these
 // doors.
+public import Buffer_Linear_Primitive
+public import Buffer_Primitive
+public import Column_Primitives
 public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
 public import Hash_Primitives
-public import Ownership_Shared_Primitive
-public import Column_Primitives
-public import Buffer_Primitive
-public import Buffer_Linear_Primitive
-public import Storage_Primitive
-public import Storage_Contiguous_Primitives
-public import Memory_Heap_Primitives
-public import Memory_Allocator_Primitive
 public import Index_Primitives
+public import Memory_Allocator_Primitive
+public import Memory_Heap_Primitives
 import Ordinal_Primitives_Standard_Library_Integration
+public import Ownership_Shared_Primitive
+public import Storage_Contiguous_Primitives
+public import Storage_Primitive
 
 // ============================================================================
 // MARK: - Key → position (the engine's projected-key probe)

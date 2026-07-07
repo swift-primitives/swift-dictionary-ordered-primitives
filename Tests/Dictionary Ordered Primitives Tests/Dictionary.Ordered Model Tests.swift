@@ -9,16 +9,16 @@
 //
 // ===----------------------------------------------------------------------===//
 
+import Buffer_Primitives_Test_Support
+import Column_Primitives
 import Dictionary_Ordered_Primitives
 import Dictionary_Primitive
-import Hash_Table_Primitives_Test_Support
-import Buffer_Primitives_Test_Support
 import Hash_Primitives
-import Ownership_Shared_Primitive
-import Column_Primitives
+import Hash_Table_Primitives_Test_Support
 import Index_Primitives
-import Tagged_Primitives_Standard_Library_Integration
 import Ordinal_Primitives_Standard_Library_Integration
+import Ownership_Shared_Primitive
+import Tagged_Primitives_Standard_Library_Integration
 import Testing
 
 // The W3 ordered-dictionary model suite (arc-2): the dictionary streams PLUS the
@@ -43,16 +43,11 @@ private struct Key: Hash.`Protocol` {
     let id: Int
     let group: Int
 
-    init(id: Int, group: Int) {
-        self.id = id
-        self.group = group
-    }
-
     borrowing func hash(into hasher: inout Hasher) {
         hasher.combine(group)
     }
 
-    static func == (lhs: borrowing Key, rhs: borrowing Key) -> Bool {
+    static func == (lhs: borrowing Self, rhs: borrowing Self) -> Bool {
         lhs.id == rhs.id
     }
 }
@@ -354,9 +349,11 @@ private struct FleetStream {
 
     init(seed: UInt64, census: Model.Census) {
         var rng = Model.Random(seed: seed)
-        self.siblings = [CoWOrdered<Key, Value>(
-            minimumCapacity: Index<Hash.Entry<Key, Value>>.Count(UInt(rng.below(9)))
-        )]
+        self.siblings = [
+            CoWOrdered<Key, Value>(
+                minimumCapacity: Index<Hash.Entry<Key, Value>>.Count(UInt(rng.below(9)))
+            )
+        ]
         self.models = [Reference()]
         self.rng = rng
         self.verdict = Model.Verdict(seed: seed)

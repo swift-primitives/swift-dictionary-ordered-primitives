@@ -9,18 +9,18 @@
 //
 // ===----------------------------------------------------------------------===//
 
+import Buffer_Primitives_Test_Support
+import Column_Primitives
 import Dictionary_Ordered_Primitives
 import Dictionary_Primitive
-import Hash_Table_Primitives_Test_Support
-import Buffer_Primitives_Test_Support
 import Hash_Indexed_Primitive
 import Hash_Primitives
 import Hash_Primitives_Standard_Library_Integration
-import Ownership_Shared_Primitive
-import Column_Primitives
+import Hash_Table_Primitives_Test_Support
 import Index_Primitives
-import Tagged_Primitives_Standard_Library_Integration
 import Ordinal_Primitives_Standard_Library_Integration
+import Ownership_Shared_Primitive
+import Tagged_Primitives_Standard_Library_Integration
 import Testing
 
 // The ordered-dictionary suite: the same ordered hashed entry column as the base
@@ -63,8 +63,8 @@ struct OrderedColumnLawTests {
         }
         _ = direct.removeValue(forKey: 9)
         _ = direct.removeValue(forKey: 0)
-        direct.insert(key: 6, value: 99)         // replacement: value swaps behind a stable key
-        direct.withMutableValue(at: rank(0)) { $0 &+= 1 }      // positional value mutation: no re-index
+        direct.insert(key: 6, value: 99)  // replacement: value swaps behind a stable key
+        direct.withMutableValue(at: rank(0)) { $0 &+= 1 }  // positional value mutation: no re-index
         let violations = direct.take().checkCoherence()
         #expect(violations.isEmpty, "\(violations)")
     }
@@ -92,7 +92,8 @@ struct OrderedCoreTests {
         #expect(displaced == 100)
         d.insert(key: 20, value: 200)
         d.insert(key: 30, value: 300)
-        let has = d.contains(key: 20), hasNot = d.contains(key: 40)
+        let has = d.contains(key: 20)
+        let hasNot = d.contains(key: 40)
         #expect(has)
         #expect(!hasNot)
         let removed = d.removeValue(forKey: 20)
@@ -132,7 +133,7 @@ struct OrderedCoreTests {
             i += 1
         }
         _ = d.removeValue(forKey: 5)
-        d.insert(key: 3, value: 999)             // replacement keeps the slot's order
+        d.insert(key: 3, value: 999)  // replacement keeps the slot's order
         var keys: [Int] = []
         d.forEach { key, _ in keys.append(key) }
         #expect(keys == [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11])
@@ -147,7 +148,8 @@ struct OrderedCoreTests {
         d.insert(key: 2, value: 20)
         var c = d.clone()
         _ = c.removeValue(forKey: 1)
-        let mineHas = d.contains(key: 1), theirsHas = c.contains(key: 1)
+        let mineHas = d.contains(key: 1)
+        let theirsHas = c.contains(key: 1)
         #expect(mineHas)
         #expect(!theirsHas)
         d.removeAll()
@@ -175,7 +177,7 @@ struct OrderedPositionTests {
         #expect(d.index(forKey: 30) == rank(2))
         #expect(d.index(forKey: 40) == nil)
         let zero: Dictionary<Int, Int>.Ordered.Index = .zero
-        #expect(d.index(forKey: 10) == zero)     // the ordered index domain typealias
+        #expect(d.index(forKey: 10) == zero)  // the ordered index domain typealias
     }
 
     @Test
@@ -184,12 +186,12 @@ struct OrderedPositionTests {
         d.insert(key: 10, value: 1)
         d.insert(key: 20, value: 2)
         d.insert(key: 30, value: 3)
-        d.insert(key: 20, value: 22)             // update: rank 1 stays
+        d.insert(key: 20, value: 22)  // update: rank 1 stays
         #expect(d.index(forKey: 20) == rank(1))
-        _ = d.removeValue(forKey: 10)            // ranks after the removal point shift
+        _ = d.removeValue(forKey: 10)  // ranks after the removal point shift
         #expect(d.index(forKey: 20) == rank(0))
         #expect(d.index(forKey: 30) == rank(1))
-        d.insert(key: 10, value: 111)            // reinsertion goes to the end
+        d.insert(key: 10, value: 111)  // reinsertion goes to the end
         #expect(d.index(forKey: 10) == rank(2))
         var keys: [Int] = []
         d.forEach { key, _ in keys.append(key) }
@@ -225,7 +227,7 @@ struct OrderedPositionTests {
         #expect(was == 70)
         let now = d.value(at: rank(0))
         #expect(now == 71)
-        #expect(d.index(forKey: 7) == rank(0))   // hash-stable: rank survived
+        #expect(d.index(forKey: 7) == rank(0))  // hash-stable: rank survived
         let k = d.key(at: rank(0))
         #expect(k == 7)
     }
@@ -262,12 +264,14 @@ struct OrderedCoWTests {
     func `copies share until mutation; inserts detach through the box`() {
         var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
         a.insert(key: 1, value: 10)
-        let b = a                                // S5: Ordered is Copyable because S is
-        a.insert(key: 2, value: 20)              // withUnique(consuming:) detaches first
-        let mine = a.count, theirs = b.count
+        let b = a  // S5: Ordered is Copyable because S is
+        a.insert(key: 2, value: 20)  // withUnique(consuming:) detaches first
+        let mine = a.count
+        let theirs = b.count
         #expect(mine == Index<Hash.Entry<Int, Int>>.Count(2))
         #expect(theirs == Index<Hash.Entry<Int, Int>>.Count(1))
-        let aHas2 = a.contains(key: 2), bHas2 = b.contains(key: 2)
+        let aHas2 = a.contains(key: 2)
+        let bHas2 = b.contains(key: 2)
         #expect(aHas2)
         #expect(!bHas2)
     }
@@ -279,7 +283,8 @@ struct OrderedCoWTests {
         a.insert(key: 2, value: 20)
         let b = a
         a.withMutableValue(at: rank(0)) { $0 = 11 }
-        let mine = a.value(at: rank(0)), theirs = b.value(at: rank(0))
+        let mine = a.value(at: rank(0))
+        let theirs = b.value(at: rank(0))
         #expect(mine == 11)
         #expect(theirs == 10)
         let keyed = a.withMutableValue(forKey: 2) { value -> Int in
@@ -301,12 +306,13 @@ struct OrderedCoWTests {
         #expect(removed == 10)
         let bStillHas = b.contains(key: 1)
         #expect(bStillHas)
-        #expect(b.index(forKey: 2) == rank(1))   // the sibling's order is untouched
+        #expect(b.index(forKey: 2) == rank(1))  // the sibling's order is untouched
         #expect(a.index(forKey: 2) == rank(0))
 
         var c = a.clone()
         c.insert(key: 9, value: 90)
-        let aHas9 = a.contains(key: 9), cHas9 = c.contains(key: 9)
+        let aHas9 = a.contains(key: 9)
+        let cHas9 = c.contains(key: 9)
         #expect(!aHas9)
         #expect(cHas9)
     }
@@ -317,7 +323,8 @@ struct OrderedCoWTests {
         a.insert(key: 1, value: 10)
         let b = a
         a.removeAll()
-        let aEmpty = a.isEmpty, bHas = b.contains(key: 1)
+        let aEmpty = a.isEmpty
+        let bHas = b.contains(key: 1)
         #expect(aEmpty)
         #expect(bHas)
     }
@@ -325,19 +332,21 @@ struct OrderedCoWTests {
     @Test
     func `set and the keyed subscript read, replace, and remove; the subscript setter detaches`() {
         var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
-        a.set(1, 10)                                 // set inserts a fresh key
+        a.set(1, 10)  // set inserts a fresh key
         a.set(2, 20)
-        a[1] = 11                                    // subscript setter replaces in place
-        let read1 = a[1], readMissing = a[9]         // subscript getter
+        a[1] = 11  // subscript setter replaces in place
+        let read1 = a[1]  // subscript getter
+        let readMissing = a[9]
         #expect(read1 == 11)
         #expect(readMissing == nil)
-        #expect(a.index(forKey: 1) == rank(0))       // replacement kept the rank
+        #expect(a.index(forKey: 1) == rank(0))  // replacement kept the rank
 
-        let b = a                                    // S5: Ordered is Copyable because S is
-        a[1] = nil                                   // assigning nil removes; detaches the box
-        let goneFromA = a[1], keptInB = b[1]
+        let b = a  // S5: Ordered is Copyable because S is
+        a[1] = nil  // assigning nil removes; detaches the box
+        let goneFromA = a[1]
+        let keptInB = b[1]
         #expect(goneFromA == nil)
-        #expect(keptInB == 11)                       // the sibling keeps its entry
+        #expect(keptInB == 11)  // the sibling keeps its entry
         #expect(a.count == Index<Hash.Entry<Int, Int>>.Count(1))
     }
 }
@@ -356,12 +365,12 @@ struct OrderedTeardownTests {
             d.insert(key: 2, value: OrderedItem(20))
             if let displaced: OrderedItem = d.insert(key: 1, value: OrderedItem(11)) {
                 let id = displaced.id
-                #expect(id == 10)                // the displaced OLD value hands back
+                #expect(id == 10)  // the displaced OLD value hands back
             } else {
                 Issue.record("expected the displaced value")
             }
             let peeked = d.withValue(at: Index(Ordinal(0))) { (item: borrowing OrderedItem) in item.id }
-            #expect(peeked == 11)                // positional borrow is not a teardown
+            #expect(peeked == 11)  // positional borrow is not a teardown
             if let removed: OrderedItem = d.removeValue(forKey: 2) {
                 let id = removed.id
                 #expect(id == 20)
@@ -370,7 +379,7 @@ struct OrderedTeardownTests {
             }
         }
         let all = OrderedProbe.destroyedSorted
-        #expect(all == [10, 11, 20])             // displaced + live-at-teardown + removed
+        #expect(all == [10, 11, 20])  // displaced + live-at-teardown + removed
     }
 
     @Test
