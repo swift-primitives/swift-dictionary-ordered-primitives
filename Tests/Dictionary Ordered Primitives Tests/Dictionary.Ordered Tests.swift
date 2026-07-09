@@ -42,7 +42,7 @@ private func rank(_ n: UInt) -> Index<Hash.Entry<Int, Int>> {
 // MARK: - [DS-024] + coherence (the Shared entry composite is this family's column)
 
 @Suite
-struct OrderedColumnLawTests {
+struct `Ordered Column Law Tests` {
 
     @Test
     func `the shared entry column obeys the seam ledger laws`() {
@@ -79,7 +79,7 @@ extension Hash.Indexed<Column.Heap<Hash.Entry<Int, Int>>> {
 // MARK: - Core keyed ops (the direct column)
 
 @Suite(.serialized)
-struct OrderedCoreTests {
+struct `Ordered Core Tests` {
 
     @Test
     func `insert, displaced hand-back, contains, removeValue, counts`() {
@@ -164,7 +164,7 @@ struct OrderedCoreTests {
 // MARK: - The order contract (positions are insertion-order ranks)
 
 @Suite(.serialized)
-struct OrderedPositionTests {
+struct `Ordered Position Tests` {
 
     @Test
     func `index(forKey:) is the rank; misses are nil`() {
@@ -258,7 +258,7 @@ struct OrderedPositionTests {
 // MARK: - CoW value semantics (the Shared composite column)
 
 @Suite(.serialized)
-struct OrderedCoWTests {
+struct `Ordered CoW Tests` {
 
     @Test
     func `copies share until mutation; inserts detach through the box`() {
@@ -354,7 +354,7 @@ struct OrderedCoWTests {
 // MARK: - Move-only values + teardown
 
 @Suite(.serialized)
-struct OrderedTeardownTests {
+struct `Ordered Teardown Tests` {
 
     @Test
     func `move-only values flow through and tear down exactly once`() {
@@ -432,7 +432,7 @@ extension OrderedProbe2 {
 // MARK: - Sendable smoke
 
 @Suite
-struct OrderedSendableTests {
+struct `Ordered Sendable Tests` {
 
     @Test
     func `sendable composes through both columns`() {
