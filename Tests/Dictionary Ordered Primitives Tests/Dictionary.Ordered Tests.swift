@@ -405,6 +405,9 @@ private struct OrderedItem: ~Copyable {
 
 private enum OrderedProbe {
     nonisolated(unsafe) static var _destroyed: [Int] = []
+}
+
+extension OrderedProbe {
     static func reset() { unsafe _destroyed = [] }
     static func recordDestroy(_ id: Int) { unsafe _destroyed.append(id) }
     static var destroyedSorted: [Int] { unsafe _destroyed.sorted() }
@@ -418,6 +421,9 @@ private struct OrderedItem2: ~Copyable {
 
 private enum OrderedProbe2 {
     nonisolated(unsafe) static var _destroyed: [Int] = []
+}
+
+extension OrderedProbe2 {
     static func reset() { unsafe _destroyed = [] }
     static func recordDestroy(_ id: Int) { unsafe _destroyed.append(id) }
     static var destroyedSorted: [Int] { unsafe _destroyed.sorted() }

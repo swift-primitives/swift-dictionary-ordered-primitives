@@ -42,7 +42,9 @@ private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Ownership.Sha
 private struct Key: Hash.`Protocol` {
     let id: Int
     let group: Int
+}
 
+extension Key {
     borrowing func hash(into hasher: inout Hasher) {
         hasher.combine(group)
     }
@@ -74,7 +76,9 @@ private struct Reference {
     var entries: [(key: Int, group: Int, value: Int)] = []
     var keys: Swift.Set<Int> = []
     var graveyard: [(key: Int, group: Int)] = []
+}
 
+extension Reference {
     mutating func append(key: Int, group: Int, value: Int) {
         entries.append((key, group, value))
         keys.insert(key)
@@ -119,7 +123,9 @@ private struct DirectStream: ~Copyable {
         self.verdict = Model.Verdict(seed: seed)
         self.census = census
     }
+}
 
+extension DirectStream {
     mutating func freshKey() -> Key {
         let key = Key(id: nextKey, group: nextKey / collisionDivisor)
         nextKey += 1
@@ -359,7 +365,9 @@ private struct FleetStream {
         self.verdict = Model.Verdict(seed: seed)
         self.census = census
     }
+}
 
+extension FleetStream {
     mutating func freshKey() -> Key {
         let key = Key(id: nextKey, group: nextKey / collisionDivisor)
         nextKey += 1
