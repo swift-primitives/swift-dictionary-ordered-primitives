@@ -35,7 +35,9 @@ private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
 private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionary<K, V>.Ordered
-private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>>
+private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<
+    Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>
+>
 
 // MARK: - Fixtures
 
@@ -117,7 +119,9 @@ private struct DirectStream: ~Copyable {
     init(seed: UInt64, census: Model.Census) {
         var rng = Model.Random(seed: seed)
         self.dictionary = MoveOrdered<Key, Model.Element.Tracked>(
-            minimumCapacity: Index<Hash.Entry<Key, Model.Element.Tracked>>.Count(UInt(rng.below(17)))
+            minimumCapacity: Index<Hash.Entry<Key, Model.Element.Tracked>>.Count(
+                UInt(rng.below(17))
+            )
         )
         self.rng = rng
         self.verdict = Model.Verdict(seed: seed)
@@ -146,7 +150,10 @@ extension DirectStream {
         let key = freshKey()
         let valueID = mintValueID()
         verdict.record("insert k=\(key.id) g=\(key.group) v=\(valueID)")
-        if let displaced = dictionary.insert(key: key, value: Model.Element.Tracked(id: valueID, census: census)) {
+        if let displaced = dictionary.insert(
+            key: key,
+            value: Model.Element.Tracked(id: valueID, census: census)
+        ) {
             verdict.diverged(["fresh key \(key.id) displaced value id \(displaced.id)"])
         } else {
             model.append(key: key.id, group: key.group, value: valueID)
@@ -158,9 +165,13 @@ extension DirectStream {
         let entry = model.entries[index]
         let valueID = mintValueID()
         verdict.record("upsert k=\(entry.key) v=\(entry.value)→\(valueID)")
-        if let displaced = dictionary.insert(key: Key(id: entry.key, group: entry.group), value: Model.Element.Tracked(id: valueID, census: census)) {
+        if let displaced = dictionary.insert(
+            key: Key(id: entry.key, group: entry.group),
+            value: Model.Element.Tracked(id: valueID, census: census)
+        ) {
             if displaced.id != entry.value {
-                verdict.diverged(["upsert displaced value id \(displaced.id), model \(entry.value)"])
+                verdict.diverged(["upsert displaced value id \(displaced.id), model \(entry.value)"]
+                )
             }
             model.setValue(valueID, at: index)
         } else {
@@ -174,7 +185,9 @@ extension DirectStream {
         verdict.record("remove k=\(entry.key) @\(index)")
         if let removed = dictionary.removeValue(forKey: Key(id: entry.key, group: entry.group)) {
             if removed.id != entry.value {
-                verdict.diverged(["removeValue returned value id \(removed.id), model \(entry.value)"])
+                verdict.diverged([
+                    "removeValue returned value id \(removed.id), model \(entry.value)"
+                ])
             }
             model.remove(at: index)
         } else {
@@ -186,7 +199,9 @@ extension DirectStream {
         let key = freshKey()
         verdict.record("absent k=\(key.id)")
         if let removed = dictionary.removeValue(forKey: key) {
-            verdict.diverged(["removeValue of never-inserted key \(key.id) returned value id \(removed.id)"])
+            verdict.diverged([
+                "removeValue of never-inserted key \(key.id) returned value id \(removed.id)"
+            ])
         }
     }
 
@@ -196,7 +211,9 @@ extension DirectStream {
         verdict.record("rank k=\(entry.key) @\(index)")
         let found = dictionary.index(forKey: Key(id: entry.key, group: entry.group))
         if found != position(index) {
-            verdict.diverged(["index(forKey: \(entry.key)): \(String(describing: found)), model rank \(index)"])
+            verdict.diverged([
+                "index(forKey: \(entry.key)): \(String(describing: found)), model rank \(index)"
+            ])
         }
     }
 
@@ -214,7 +231,8 @@ extension DirectStream {
         let index = rng.below(model.entries.count)
         let entry = model.entries[index]
         verdict.record("read@\(index)")
-        let value = dictionary.withValue(at: position(index)) { (value: borrowing Model.Element.Tracked) in
+        let value = dictionary.withValue(at: position(index)) {
+            (value: borrowing Model.Element.Tracked) in
             value.id
         }
         if value != entry.value {
@@ -229,13 +247,16 @@ extension DirectStream {
         let valueID = mintValueID()
         verdict.record("mutate@\(index) v=\(entry.value)→\(valueID)")
         let census = self.census
-        let previous = dictionary.withMutableValue(at: position(index)) { (slot: inout Model.Element.Tracked) -> Int in
+        let previous = dictionary.withMutableValue(at: position(index)) {
+            (slot: inout Model.Element.Tracked) -> Int in
             let old = slot.id
             slot = Model.Element.Tracked(id: valueID, group: 0, census: census)
             return old
         }
         if previous != entry.value {
-            verdict.diverged(["withMutableValue(at: \(index)) displaced \(previous), model \(entry.value)"])
+            verdict.diverged([
+                "withMutableValue(at: \(index)) displaced \(previous), model \(entry.value)"
+            ])
         }
         model.setValue(valueID, at: index)
     }
@@ -265,19 +286,24 @@ extension DirectStream {
     /// (index(forKey:) == rank; key(at: rank) == key) across the whole model.
     func audit() -> [String] {
         var findings: [String] = []
-        if dictionary.count != Index<Hash.Entry<Key, Model.Element.Tracked>>.Count(UInt(model.entries.count)) {
+        if dictionary.count
+            != Index<Hash.Entry<Key, Model.Element.Tracked>>.Count(UInt(model.entries.count))
+        {
             findings.append("count: dictionary \(dictionary.count), model \(model.entries.count)")
         }
         for (offset, entry) in model.entries.enumerated() {
             let found = dictionary.index(forKey: Key(id: entry.key, group: entry.group))
             if found != position(offset) {
-                findings.append("rank(k \(entry.key)): \(String(describing: found)), model \(offset)")
+                findings.append(
+                    "rank(k \(entry.key)): \(String(describing: found)), model \(offset)"
+                )
             }
             let key = dictionary.key(at: position(offset))
             if key.id != entry.key {
                 findings.append("key(at: \(offset)): \(key.id), model \(entry.key)")
             }
-            let value = dictionary.withValue(at: position(offset)) { (value: borrowing Model.Element.Tracked) in
+            let value = dictionary.withValue(at: position(offset)) {
+                (value: borrowing Model.Element.Tracked) in
                 value.id
             }
             if value != entry.value {
@@ -403,7 +429,9 @@ extension FleetStream {
         let value = freshValue()
         verdict.record("insert[\(target)] k=\(key.id) v=\(value.id)")
         if let displaced = siblings[target].insert(key: key, value: value) {
-            verdict.diverged(["fresh key \(key.id) displaced value id \(displaced.id) on sibling \(target)"])
+            verdict.diverged([
+                "fresh key \(key.id) displaced value id \(displaced.id) on sibling \(target)"
+            ])
         } else {
             models[target].append(key: key.id, group: key.group, value: value.id)
         }
@@ -414,13 +442,18 @@ extension FleetStream {
         let entry = models[target].entries[index]
         let value = freshValue()
         verdict.record("upsert[\(target)] k=\(entry.key) v=\(entry.value)→\(value.id)")
-        if let displaced = siblings[target].insert(key: Key(id: entry.key, group: entry.group), value: value) {
+        if let displaced = siblings[target].insert(
+            key: Key(id: entry.key, group: entry.group),
+            value: value
+        ) {
             if displaced.id != entry.value {
-                verdict.diverged(["upsert displaced value id \(displaced.id), model \(entry.value)"])
+                verdict.diverged(["upsert displaced value id \(displaced.id), model \(entry.value)"]
+                )
             }
             models[target].setValue(value.id, at: index)
         } else {
-            verdict.diverged(["upsert of live key \(entry.key) reported fresh on sibling \(target)"])
+            verdict.diverged(["upsert of live key \(entry.key) reported fresh on sibling \(target)"]
+            )
         }
     }
 
@@ -428,9 +461,13 @@ extension FleetStream {
         let index = rng.below(models[target].entries.count)
         let entry = models[target].entries[index]
         verdict.record("remove[\(target)] k=\(entry.key)")
-        if let removed = siblings[target].removeValue(forKey: Key(id: entry.key, group: entry.group)) {
+        if let removed = siblings[target].removeValue(
+            forKey: Key(id: entry.key, group: entry.group)
+        ) {
             if removed.id != entry.value {
-                verdict.diverged(["removeValue returned value id \(removed.id), model \(entry.value)"])
+                verdict.diverged([
+                    "removeValue returned value id \(removed.id), model \(entry.value)"
+                ])
             }
             models[target].remove(at: index)
         } else {
@@ -444,11 +481,15 @@ extension FleetStream {
         verdict.record("entry[\(target)]@\(index)")
         let pair = siblings[target].entry(at: position(index))
         if pair.key.id != entry.key || pair.value.id != entry.value {
-            verdict.diverged(["entry(at: \(index)) on sibling \(target): (\(pair.key.id), \(pair.value.id)), model (\(entry.key), \(entry.value))"])
+            verdict.diverged([
+                "entry(at: \(index)) on sibling \(target): (\(pair.key.id), \(pair.value.id)), model (\(entry.key), \(entry.value))"
+            ])
         }
         let value = siblings[target].value(at: position(index))
         if value.id != entry.value {
-            verdict.diverged(["value(at: \(index)) on sibling \(target): \(value.id), model \(entry.value)"])
+            verdict.diverged([
+                "value(at: \(index)) on sibling \(target): \(value.id), model \(entry.value)"
+            ])
         }
     }
 
@@ -457,13 +498,16 @@ extension FleetStream {
         let entry = models[target].entries[index]
         let value = freshValue()
         verdict.record("mutate[\(target)]@\(index) v=\(entry.value)→\(value.id)")
-        let previous = siblings[target].withMutableValue(at: position(index)) { (slot: inout Value) -> Int in
+        let previous = siblings[target].withMutableValue(at: position(index)) {
+            (slot: inout Value) -> Int in
             let old = slot.id
             slot = value
             return old
         }
         if previous != entry.value {
-            verdict.diverged(["withMutableValue(at: \(index)) displaced \(previous), model \(entry.value)"])
+            verdict.diverged([
+                "withMutableValue(at: \(index)) displaced \(previous), model \(entry.value)"
+            ])
         }
         models[target].setValue(value.id, at: index)
     }
@@ -476,7 +520,9 @@ extension FleetStream {
             keys.append(key.id)
             values.append(value.id)
         }
-        if keys != models[target].entries.map({ $0.key }) || values != models[target].entries.map({ $0.value }) {
+        if keys != models[target].entries.map({ $0.key })
+            || values != models[target].entries.map({ $0.value })
+        {
             verdict.diverged(["sibling \(target) walked \(keys)/\(values), model order broken"])
         }
     }
@@ -492,13 +538,19 @@ extension FleetStream {
     func audit() -> [String] {
         var findings: [String] = []
         for (index, model) in models.enumerated() {
-            if siblings[index].count != Index<Hash.Entry<Key, Value>>.Count(UInt(model.entries.count)) {
-                findings.append("sibling \(index) count \(siblings[index].count), model \(model.entries.count)")
+            if siblings[index].count
+                != Index<Hash.Entry<Key, Value>>.Count(UInt(model.entries.count))
+            {
+                findings.append(
+                    "sibling \(index) count \(siblings[index].count), model \(model.entries.count)"
+                )
             }
             for (offset, entry) in model.entries.enumerated() {
                 let found = siblings[index].index(forKey: Key(id: entry.key, group: entry.group))
                 if found != position(offset) {
-                    findings.append("sibling \(index) rank(k \(entry.key)): \(String(describing: found)), model \(offset)")
+                    findings.append(
+                        "sibling \(index) rank(k \(entry.key)): \(String(describing: found)), model \(offset)"
+                    )
                 }
             }
             var keys: [Int] = []
@@ -595,15 +647,21 @@ extension `Dictionary.Ordered Model`.Unit {
             minimumCapacity: Index<Hash.Entry<Key, Value>>.Count(8)
         )
         (0..<5).forEach { id in
-            dictionary.insert(key: Key(id: id, group: id / 2), value: Value(id: 100 + id, census: census))
+            dictionary.insert(
+                key: Key(id: id, group: id / 2),
+                value: Value(id: 100 + id, census: census)
+            )
         }
-        dictionary.insert(key: Key(id: 2, group: 1), value: Value(id: 999, census: census))  // update keeps rank
+        // update keeps rank
+        dictionary.insert(key: Key(id: 2, group: 1), value: Value(id: 999, census: census))
         let rankTwo = dictionary.index(forKey: Key(id: 2, group: 1))
         #expect(rankTwo == Index(Ordinal(UInt(2))))
-        _ = dictionary.removeValue(forKey: Key(id: 1, group: 0))  // removal shifts
+        // removal shifts
+        _ = dictionary.removeValue(forKey: Key(id: 1, group: 0))
         let rankTwoShifted = dictionary.index(forKey: Key(id: 2, group: 1))
         #expect(rankTwoShifted == Index(Ordinal(UInt(1))))
-        dictionary.insert(key: Key(id: 1, group: 0), value: Value(id: 555, census: census))  // reinsertion appends
+        // reinsertion appends
+        dictionary.insert(key: Key(id: 1, group: 0), value: Value(id: 555, census: census))
         let rankOneAppended = dictionary.index(forKey: Key(id: 1, group: 0))
         #expect(rankOneAppended == Index(Ordinal(UInt(4))))
     }
@@ -621,7 +679,8 @@ extension `Dictionary.Ordered Model`.`Edge Case` {
         first.insert(key: Key(id: 1, group: 0), value: Value(id: 10, census: census))
         first.removeAll()
         var second = first
-        second.insert(key: Key(id: 2, group: 0), value: Value(id: 20, census: census))  // traps pre-fix
+        // traps pre-fix
+        second.insert(key: Key(id: 2, group: 0), value: Value(id: 20, census: census))
         first.insert(key: Key(id: 3, group: 0), value: Value(id: 30, census: census))
         let secondHasTheirs = second.contains(key: Key(id: 2, group: 0))
         let firstHasTheirs = first.contains(key: Key(id: 3, group: 0))
