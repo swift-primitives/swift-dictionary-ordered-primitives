@@ -14,7 +14,7 @@ public import Buffer_Protocol_Primitives
 public import Column_Primitives
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
-public import Hash_Primitives
+import Hash_Primitives
 public import Memory_Allocator_Primitive
 public import Memory_Heap_Primitives
 public import Ownership_Shared_Primitive

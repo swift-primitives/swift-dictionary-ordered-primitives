@@ -23,7 +23,7 @@ public import Column_Primitives
 public import Dictionary_Ordered_Primitive
 public import Dictionary_Primitive
 public import Hash_Indexed_Primitive
-public import Hash_Primitives
+import Hash_Primitives
 public import Index_Primitives
 public import Memory_Allocator_Primitive
 public import Memory_Heap_Primitives
