@@ -12,13 +12,12 @@ let package = Package(
         .visionOS(.v27),
     ],
     products: [
-        // MARK: - Base type
+
         .library(
             name: "Dictionary Ordered Primitive",
             targets: ["Dictionary Ordered Primitive"]
         ),
 
-        // MARK: - Umbrella
         .library(
             name: "Dictionary Ordered Primitives",
             targets: ["Dictionary Ordered Primitives"]
@@ -77,16 +76,10 @@ let package = Package(
             url: "https://github.com/swift-primitives/swift-tagged-primitives.git",
             branch: "main"
         ),
-        // NOTE: the pre-reshape deps (swift-set-ordered-primitives keys, the parallel
-        // Buffer.Linear value plane, Hash Table Static, iterator/sequence/property
-        // support) RETIRED with the element-keyed shape (W5 ordered round) — the
-        // ordered dictionary now composes the same `Hash.Indexed` entry column as
-        // `Dictionary<S>`, spelled with the `Column` vocabulary.
+
     ],
     targets: [
 
-        // MARK: - Base type (struct Dictionary<S>.Ordered: the order-contracting
-        // ADT over the ordered hashed entry column + its ordered index domain)
         .target(
             name: "Dictionary Ordered Primitive",
             dependencies: [
@@ -117,8 +110,6 @@ let package = Package(
             ]
         ),
 
-        // MARK: - Umbrella (the pinned keyed + positional surface + counts;
-        // re-exports the base)
         .target(
             name: "Dictionary Ordered Primitives",
             dependencies: [
@@ -156,7 +147,6 @@ let package = Package(
             ]
         ),
 
-        // MARK: - Tests
         .testTarget(
             name: "Dictionary Ordered Primitives Tests",
             dependencies: [

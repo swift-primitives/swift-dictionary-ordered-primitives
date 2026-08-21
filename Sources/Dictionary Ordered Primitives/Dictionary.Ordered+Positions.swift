@@ -1,22 +1,3 @@
-// ===----------------------------------------------------------------------===//
-//
-// This source file is part of the swift-primitives open source project
-//
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
-// Licensed under Apache License v2.0
-//
-// See LICENSE for license information
-//
-// ===----------------------------------------------------------------------===//
-
-// The ORDER-FACING doors — the discipline this package exists for. Positions are
-// insertion-order ranks into the dense plane (``Dictionary/Ordered/Index``), so
-// every positional read is O(1); `index(forKey:)` is the engine's projected-key
-// probe. Bounds violations are programmer errors (preconditions, matching the
-// indexed seam's discipline) — key ABSENCE stays `nil`-shaped, position absence
-// traps. Positional mutation is VALUE-only (mutability ruling (a)): the key at a
-// position — and therefore its hash and its rank — never changes through these
-// doors.
 public import Buffer_Linear_Primitive
 public import Buffer_Primitive
 public import Column_Primitives
@@ -32,15 +13,8 @@ public import Ownership_Shared_Primitive
 public import Storage_Contiguous_Primitives
 public import Storage_Primitive
 
-// ============================================================================
-// MARK: - Key → position (the engine's projected-key probe)
-// ============================================================================
-
 extension __DictionaryOrdered where S: ~Copyable {
-    /// The position of the entry for the key, or `nil` if the key is absent
-    /// (direct column).
-    ///
-    /// - Complexity: O(1) average
+
     @inlinable
     public func index<K: Hash.Key & ~Copyable, V: ~Copyable>(
         forKey key: borrowing K
@@ -55,10 +29,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         )
     }
 
-    /// The position of the entry for the key (`Shared` column; no gate — reads
-    /// never detach).
-    ///
-    /// - Complexity: O(1) average
     @inlinable
     public func index<K: Hash.Key & ~Copyable, V: ~Copyable>(
         forKey key: borrowing K
@@ -76,15 +46,8 @@ extension __DictionaryOrdered where S: ~Copyable {
     }
 }
 
-// ============================================================================
-// MARK: - Positional reads
-// ============================================================================
-
 extension __DictionaryOrdered where S: ~Copyable {
-    /// The key at the position (direct column).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
+
     @inlinable
     public func key<K: Hash.Key, V: ~Copyable>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -97,10 +60,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         return store[position].key
     }
 
-    /// The key at the position (`Shared` column; no gate).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
     @inlinable
     public func key<K: Hash.Key, V: ~Copyable>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -115,10 +74,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         }
     }
 
-    /// The value at the position (direct column).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
     @inlinable
     public func value<K: Hash.Key & ~Copyable, V>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -131,10 +86,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         return store[position].value
     }
 
-    /// The value at the position (`Shared` column; no gate).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
     @inlinable
     public func value<K: Hash.Key & ~Copyable, V>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -149,10 +100,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         }
     }
 
-    /// The key–value pair at the position (direct column).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
     @inlinable
     public func entry<K: Hash.Key, V>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -165,10 +112,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         return (key: store[position].key, value: store[position].value)
     }
 
-    /// The key–value pair at the position (`Shared` column; no gate).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1)
     @inlinable
     public func entry<K: Hash.Key, V>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>
@@ -183,11 +126,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         }
     }
 
-    /// Calls the closure with the value at the position; returns its result
-    /// (direct column; the move-only-honest positional read).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1), plus the closure
     @inlinable
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>,
@@ -201,10 +139,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         return body(store[position].value)
     }
 
-    /// Calls the closure with the value at the position (`Shared` column; no gate).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1), plus the closure
     @inlinable
     public func withValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>,
@@ -221,18 +155,8 @@ extension __DictionaryOrdered where S: ~Copyable {
     }
 }
 
-// ============================================================================
-// MARK: - Positional value mutation (mutability ruling (a): the key — and so the
-// position's hash identity — stays put; the seam's re-index guard takes its
-// cheap no-change branch)
-// ============================================================================
-
 extension __DictionaryOrdered where S: ~Copyable {
-    /// Calls the closure with mutable access to the value at the position;
-    /// returns its result (direct column).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1), plus the closure
+
     @inlinable
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>,
@@ -246,11 +170,6 @@ extension __DictionaryOrdered where S: ~Copyable {
         return body(&store[position].value)
     }
 
-    /// Calls the closure with mutable access to the value at the position
-    /// (`Shared` column; uniqueness restored first).
-    ///
-    /// - Precondition: `position < count`.
-    /// - Complexity: O(1) (O(`capacity`) when a copy must be made first), plus the closure
     @inlinable
     public mutating func withMutableValue<K: Hash.Key & ~Copyable, V: ~Copyable, R>(
         at position: Index_Primitives.Index<Hash.Entry<K, V>>,

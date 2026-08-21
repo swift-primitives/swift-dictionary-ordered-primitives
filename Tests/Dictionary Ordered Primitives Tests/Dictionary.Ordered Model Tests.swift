@@ -1,14 +1,3 @@
-// ===----------------------------------------------------------------------===//
-//
-// This source file is part of the swift-primitives open source project
-//
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
-// Licensed under Apache License v2.0
-//
-// See LICENSE for license information
-//
-// ===----------------------------------------------------------------------===//
-
 import Buffer_Primitives_Test_Support
 import Column_Primitives
 import Dictionary_Ordered_Primitives
@@ -21,16 +10,6 @@ import Ownership_Shared_Primitive
 import Tagged_Primitives_Standard_Library_Integration
 import Testing
 
-// The W3 ordered-dictionary model suite (arc-2): the dictionary streams PLUS the
-// positional doors — `index(forKey:)`, `key(at:)`, `withValue(at:)`, and
-// `withMutableValue(at:)` are audited against the model rank for every entry,
-// every op; the order CONTRACT (updates keep rank, removal shifts, reinsertion
-// appends) is the lawful surface under test. Both columns; the Shared lane is
-// the sibling fleet (refcounted censused values, end-of-scope multiset
-// exactness). The ASK-W3-A regression (fork-after-removeAll stays mutable —
-// the [MEM-COPY-017] pair split) gates in the Edge Case suite.
-// Shape constraint: B10.
-
 private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
@@ -38,8 +17,6 @@ private typealias MoveOrdered<K: Hash.Key & ~Copyable, V: ~Copyable> = Dictionar
 private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<
     Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>
 >
-
-// MARK: - Fixtures
 
 private struct Key: Hash.`Protocol` {
     let id: Int
@@ -72,8 +49,6 @@ private final class Value {
     }
 }
 
-// MARK: - The reference model: insertion-ordered (key, value) pairs
-
 private struct Reference {
     var entries: [(key: Int, group: Int, value: Int)] = []
     var keys: Swift.Set<Int> = []
@@ -103,8 +78,6 @@ extension Reference {
         }
     }
 }
-
-// MARK: - The direct stream (move-only censused values + the positional doors)
 
 private struct DirectStream: ~Copyable {
     var dictionary: MoveOrdered<Key, Model.Element.Tracked>
@@ -240,7 +213,6 @@ extension DirectStream {
         }
     }
 
-    /// The positional mutation door — rank stays, the displaced value dies.
     mutating func mutateValueAt() {
         let index = rng.below(model.entries.count)
         let entry = model.entries[index]
@@ -282,8 +254,6 @@ extension DirectStream {
         model.keys.removeAll()
     }
 
-    /// Order + every positional door, every audited op: rank round-trips
-    /// (index(forKey:) == rank; key(at: rank) == key) across the whole model.
     func audit() -> [String] {
         var findings: [String] = []
         if dictionary.count
@@ -357,7 +327,7 @@ private func runDirectStream(seed: UInt64) -> Model.Verdict {
     let census = Model.Census()
     var stream = DirectStream(seed: seed, census: census)
     stream.run()
-    var verdict = stream.finish()  // the dictionary dies here
+    var verdict = stream.finish()
 
     if !census.isExact {
         verdict.findings.append(
@@ -366,8 +336,6 @@ private func runDirectStream(seed: UInt64) -> Model.Verdict {
     }
     return verdict
 }
-
-// MARK: - The Shared (CoW) sibling fleet
 
 private struct FleetStream {
     var siblings: [CoWOrdered<Key, Value>]
@@ -606,7 +574,7 @@ private func runFleetStream(seed: UInt64) -> Model.Verdict {
         var stream = FleetStream(seed: seed, census: census)
         stream.run()
         verdict = stream.verdict
-    }  // every sibling dies here; value refcounts fall to zero
+    }
 
     if !census.isExact {
         verdict.findings.append(
@@ -615,8 +583,6 @@ private func runFleetStream(seed: UInt64) -> Model.Verdict {
     }
     return verdict
 }
-
-// MARK: - The suites
 
 @Suite
 struct `Dictionary.Ordered Model` {
@@ -652,15 +618,15 @@ extension `Dictionary.Ordered Model`.Unit {
                 value: Value(id: 100 + id, census: census)
             )
         }
-        // update keeps rank
+
         dictionary.insert(key: Key(id: 2, group: 1), value: Value(id: 999, census: census))
         let rankTwo = dictionary.index(forKey: Key(id: 2, group: 1))
         #expect(rankTwo == Index(Ordinal(UInt(2))))
-        // removal shifts
+
         _ = dictionary.removeValue(forKey: Key(id: 1, group: 0))
         let rankTwoShifted = dictionary.index(forKey: Key(id: 2, group: 1))
         #expect(rankTwoShifted == Index(Ordinal(UInt(1))))
-        // reinsertion appends
+
         dictionary.insert(key: Key(id: 1, group: 0), value: Value(id: 555, census: census))
         let rankOneAppended = dictionary.index(forKey: Key(id: 1, group: 0))
         #expect(rankOneAppended == Index(Ordinal(UInt(4))))
@@ -668,8 +634,7 @@ extension `Dictionary.Ordered Model`.Unit {
 }
 
 extension `Dictionary.Ordered Model`.`Edge Case` {
-    // The ASK-W3-A regression gate (trapped pre-fix; the [MEM-COPY-017] pair split
-    // keeps the post-wipe box strategy-carrying).
+
     @Test
     func `forking after removeAll keeps both siblings independently mutable`() {
         let census = Model.Census()
@@ -679,7 +644,7 @@ extension `Dictionary.Ordered Model`.`Edge Case` {
         first.insert(key: Key(id: 1, group: 0), value: Value(id: 10, census: census))
         first.removeAll()
         var second = first
-        // traps pre-fix
+
         second.insert(key: Key(id: 2, group: 0), value: Value(id: 20, census: census))
         first.insert(key: Key(id: 3, group: 0), value: Value(id: 30, census: census))
         let secondHasTheirs = second.contains(key: Key(id: 2, group: 0))

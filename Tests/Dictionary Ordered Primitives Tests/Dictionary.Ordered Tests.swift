@@ -1,14 +1,3 @@
-// ===----------------------------------------------------------------------===//
-//
-// This source file is part of the swift-primitives open source project
-//
-// Copyright (c) 2024-2026 Coen ten Thije Boonkkamp and the swift-primitives project authors
-// Licensed under Apache License v2.0
-//
-// See LICENSE for license information
-//
-// ===----------------------------------------------------------------------===//
-
 import Buffer_Primitives_Test_Support
 import Column_Primitives
 import Dictionary_Ordered_Primitives
@@ -23,10 +12,6 @@ import Ownership_Shared_Primitive
 import Tagged_Primitives_Standard_Library_Integration
 import Testing
 
-// The ordered-dictionary suite: the same ordered hashed entry column as the base
-// `Dictionary<S>`, with the ORDER CONTRACT under test — positions are
-// insertion-order ranks; updates keep rank; removal shifts; reinsertion appends.
-
 private typealias EntryColumn<K: Hash.Key & ~Copyable, V: ~Copyable> =
     Hash.Indexed<Column.Heap<Hash.Entry<K, V>>>
 
@@ -35,13 +20,9 @@ private typealias CoWOrdered<K: Hash.Key, V> = __DictionaryOrdered<
     Ownership.Shared<Hash.Entry<K, V>, EntryColumn<K, V>>
 >
 
-/// The position at insertion-order rank `n` (runtime construction; the ordered
-/// index domain is entry-tagged).
 private func rank(_ n: UInt) -> Index<Hash.Entry<Int, Int>> {
     Index(Ordinal(n))
 }
-
-// MARK: - [DS-024] + coherence (the Shared entry composite is this family's column)
 
 @Suite
 struct `Ordered Column Law Tests` {
@@ -69,8 +50,8 @@ struct `Ordered Column Law Tests` {
         }
         _ = direct.removeValue(forKey: 9)
         _ = direct.removeValue(forKey: 0)
-        direct.insert(key: 6, value: 99)  // replacement: value swaps behind a stable key
-        direct.withMutableValue(at: rank(0)) { $0 &+= 1 }  // positional value mutation: no re-index
+        direct.insert(key: 6, value: 99)
+        direct.withMutableValue(at: rank(0)) { $0 &+= 1 }
         let violations = direct.take().checkCoherence()
         #expect(violations.isEmpty, "\(violations)")
     }
@@ -81,8 +62,6 @@ extension Hash.Indexed<Column.Heap<Hash.Entry<Int, Int>>> {
         Hash.Coherence.violations(self)
     }
 }
-
-// MARK: - Core keyed ops (the direct column)
 
 @Suite(.serialized)
 struct `Ordered Core Tests` {
@@ -139,7 +118,7 @@ struct `Ordered Core Tests` {
             i += 1
         }
         _ = d.removeValue(forKey: 5)
-        d.insert(key: 3, value: 999)  // replacement keeps the slot's order
+        d.insert(key: 3, value: 999)
         var keys: [Int] = []
         d.forEach { key, _ in keys.append(key) }
         #expect(keys == [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11])
@@ -167,8 +146,6 @@ struct `Ordered Core Tests` {
     }
 }
 
-// MARK: - The order contract (positions are insertion-order ranks)
-
 @Suite(.serialized)
 struct `Ordered Position Tests` {
 
@@ -183,7 +160,7 @@ struct `Ordered Position Tests` {
         #expect(d.index(forKey: 30) == rank(2))
         #expect(d.index(forKey: 40) == nil)
         let zero: Dictionary<Int, Int>.Ordered.Index = .zero
-        #expect(d.index(forKey: 10) == zero)  // the ordered index domain typealias
+        #expect(d.index(forKey: 10) == zero)
     }
 
     @Test
@@ -192,12 +169,12 @@ struct `Ordered Position Tests` {
         d.insert(key: 10, value: 1)
         d.insert(key: 20, value: 2)
         d.insert(key: 30, value: 3)
-        d.insert(key: 20, value: 22)  // update: rank 1 stays
+        d.insert(key: 20, value: 22)
         #expect(d.index(forKey: 20) == rank(1))
-        _ = d.removeValue(forKey: 10)  // ranks after the removal point shift
+        _ = d.removeValue(forKey: 10)
         #expect(d.index(forKey: 20) == rank(0))
         #expect(d.index(forKey: 30) == rank(1))
-        d.insert(key: 10, value: 111)  // reinsertion goes to the end
+        d.insert(key: 10, value: 111)
         #expect(d.index(forKey: 10) == rank(2))
         var keys: [Int] = []
         d.forEach { key, _ in keys.append(key) }
@@ -233,7 +210,7 @@ struct `Ordered Position Tests` {
         #expect(was == 70)
         let now = d.value(at: rank(0))
         #expect(now == 71)
-        #expect(d.index(forKey: 7) == rank(0))  // hash-stable: rank survived
+        #expect(d.index(forKey: 7) == rank(0))
         let k = d.key(at: rank(0))
         #expect(k == 7)
     }
@@ -261,8 +238,6 @@ struct `Ordered Position Tests` {
     }
 }
 
-// MARK: - CoW value semantics (the Shared composite column)
-
 @Suite(.serialized)
 struct `Ordered CoW Tests` {
 
@@ -270,8 +245,8 @@ struct `Ordered CoW Tests` {
     func `copies share until mutation; inserts detach through the box`() {
         var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
         a.insert(key: 1, value: 10)
-        let b = a  // S5: Ordered is Copyable because S is
-        a.insert(key: 2, value: 20)  // withUnique(consuming:) detaches first
+        let b = a
+        a.insert(key: 2, value: 20)
         let mine = a.count
         let theirs = b.count
         #expect(mine == Index<Hash.Entry<Int, Int>>.Count(2))
@@ -312,7 +287,7 @@ struct `Ordered CoW Tests` {
         #expect(removed == 10)
         let bStillHas = b.contains(key: 1)
         #expect(bStillHas)
-        #expect(b.index(forKey: 2) == rank(1))  // the sibling's order is untouched
+        #expect(b.index(forKey: 2) == rank(1))
         #expect(a.index(forKey: 2) == rank(0))
 
         var c = a.clone()
@@ -338,26 +313,24 @@ struct `Ordered CoW Tests` {
     @Test
     func `set and the keyed subscript read, replace, and remove; the subscript setter detaches`() {
         var a = CoWOrdered<Int, Int>(minimumCapacity: 4)
-        a.set(1, 10)  // set inserts a fresh key
+        a.set(1, 10)
         a.set(2, 20)
-        a[1] = 11  // subscript setter replaces in place
-        let read1 = a[1]  // subscript getter
+        a[1] = 11
+        let read1 = a[1]
         let readMissing = a[9]
         #expect(read1 == 11)
         #expect(readMissing == nil)
-        #expect(a.index(forKey: 1) == rank(0))  // replacement kept the rank
+        #expect(a.index(forKey: 1) == rank(0))
 
-        let b = a  // S5: Ordered is Copyable because S is
-        a[1] = nil  // assigning nil removes; detaches the box
+        let b = a
+        a[1] = nil
         let goneFromA = a[1]
         let keptInB = b[1]
         #expect(goneFromA == nil)
-        #expect(keptInB == 11)  // the sibling keeps its entry
+        #expect(keptInB == 11)
         #expect(a.count == Index<Hash.Entry<Int, Int>>.Count(1))
     }
 }
-
-// MARK: - Move-only values + teardown
 
 @Suite(.serialized)
 struct `Ordered Teardown Tests` {
@@ -371,14 +344,14 @@ struct `Ordered Teardown Tests` {
             d.insert(key: 2, value: OrderedItem(20))
             if let displaced: OrderedItem = d.insert(key: 1, value: OrderedItem(11)) {
                 let id = displaced.id
-                #expect(id == 10)  // the displaced OLD value hands back
+                #expect(id == 10)
             } else {
                 Issue.record("expected the displaced value")
             }
             let peeked = d.withValue(at: Index(Ordinal(0))) { (item: borrowing OrderedItem) in
                 item.id
             }
-            #expect(peeked == 11)  // positional borrow is not a teardown
+            #expect(peeked == 11)
             if let removed: OrderedItem = d.removeValue(forKey: 2) {
                 let id = removed.id
                 #expect(id == 20)
@@ -387,7 +360,7 @@ struct `Ordered Teardown Tests` {
             }
         }
         let all = OrderedProbe.destroyedSorted
-        #expect(all == [10, 11, 20])  // displaced + live-at-teardown + removed
+        #expect(all == [10, 11, 20])
     }
 
     @Test
@@ -438,8 +411,6 @@ extension OrderedProbe2 {
     static func recordDestroy(_ id: Int) { unsafe _destroyed.append(id) }
     static var destroyedSorted: [Int] { unsafe _destroyed.sorted() }
 }
-
-// MARK: - Sendable smoke
 
 @Suite
 struct `Ordered Sendable Tests` {
